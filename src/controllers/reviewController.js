@@ -1,0 +1,75 @@
+import Review from '../models/Review.js';
+import ApiResponse from '../utils/ApiResponse.js';
+
+/**
+ * GET /api/reviews
+ * Public — returns all approved reviews, newest first.
+ */
+export const getReviews = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      Review.find({ approved: true })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Review.countDocuments({ approved: true }),
+    ]);
+
+    return ApiResponse.paginated(res, reviews, page, limit, total);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/reviews
+ * Authenticated — create or update the current user's review.
+ */
+export const createReview = async (req, res, next) => {
+  try {
+    const { rating, content } = req.body;
+    const userId = req.user._id;
+    const displayName = req.user.name;
+
+    // Upsert: create or update if user already has a review
+    const review = await Review.findOneAndUpdate(
+      { user: userId },
+      {
+        user: userId,
+        displayName,
+        rating,
+        content,
+        approved: true,
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    return ApiResponse.created(res, review, 'Review submitted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/reviews
+ * Authenticated — delete the current user's review.
+ */
+export const deleteReview = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const review = await Review.findOneAndDelete({ user: userId });
+
+    if (!review) {
+      return ApiResponse.notFound(res, 'No review found to delete.');
+    }
+
+    return ApiResponse.success(res, null, 'Review deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
