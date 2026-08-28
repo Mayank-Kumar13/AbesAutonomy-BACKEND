@@ -7,7 +7,7 @@ REST API server for the ABES Autonomy student notes platform.
 - **Runtime**: Node.js (ES modules)
 - **Framework**: Express 5
 - **Database**: MongoDB Atlas + Mongoose 8
-- **Auth**: JWT + bcryptjs
+- **Auth**: JWT + bcrypt
 - **File Storage**: ImageKit (PDF hosting)
 - **Security**: Helmet, CORS, rate limiting, mongo-sanitize, express-validator
 

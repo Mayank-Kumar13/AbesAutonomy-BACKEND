@@ -1,4 +1,4 @@
-import bcryptjs from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import OtpToken from '../models/OtpToken.js';
@@ -14,7 +14,7 @@ const generateOtp = () => String(crypto.randomInt(100000, 999999));
 
 const issueOtp = async (userId, email, purpose) => {
   const otp = generateOtp();
-  const otpHash = await bcryptjs.hash(otp, 10);
+  const otpHash = await bcrypt.hash(otp, 10);
   await OtpToken.deleteMany({ userId, purpose });
   await OtpToken.create({
     userId,
@@ -99,7 +99,7 @@ export const verifyOtp = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Too many incorrect attempts. Request a new OTP.');
     }
 
-    const isMatch = await bcryptjs.compare(otp, record.otpHash);
+    const isMatch = await bcrypt.compare(otp, record.otpHash);
     if (!isMatch) {
       record.attempts += 1;
       await record.save();
