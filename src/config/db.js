@@ -1,15 +1,24 @@
 import mongoose from 'mongoose';
 import env from './env.js';
 
+let cachedConnection = null;
+
 const connectDB = async () => {
+  if (cachedConnection) {
+    console.log('✅ Using cached MongoDB connection');
+    return cachedConnection;
+  }
+
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
       dbName: 'abes_autonomy',
     });
+    cachedConnection = conn;
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     console.error(`❌ MongoDB connection error: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 
