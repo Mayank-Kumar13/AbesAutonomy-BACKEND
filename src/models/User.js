@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcryptjs from 'bcryptjs';
 
 const ROLES = ['user', 'admin'];
 const PROVIDERS = ['email', 'google', 'github'];
@@ -99,7 +99,7 @@ userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
 
   try {
-    this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
+    this.password = await bcryptjs.hash(this.password, SALT_ROUNDS);
     next();
   } catch (error) {
     next(error);
@@ -109,7 +109,7 @@ userSchema.pre('save', async function (next) {
 // ─── Instance method: compare password ───────────────
 userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.password) return false;
-  return bcrypt.compare(candidatePassword, this.password);
+  return bcryptjs.compare(candidatePassword, this.password);
 };
 
 // ─── Instance method: safe JSON (strip password) ─────
