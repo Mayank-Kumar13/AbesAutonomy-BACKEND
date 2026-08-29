@@ -1,11 +1,5 @@
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-
-const file_name = fileURLToPath(import.meta.url);
-const dir_name = dirname(file_name);
-
-dotenv.config({ path: resolve(dir_name, '../../.env') });
+dotenv.config();
 
 const requiredVars = ['MONGODB_URI', 'JWT_SECRET'];
 

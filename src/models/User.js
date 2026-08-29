@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const ROLES = ['user', 'admin'];
 const PROVIDERS = ['email', 'google', 'github'];
