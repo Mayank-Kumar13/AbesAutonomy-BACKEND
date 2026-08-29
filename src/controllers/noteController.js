@@ -52,7 +52,7 @@ export const getNote = async (req, res, next) => {
 
 /**
  * GET /api/notes/:id/pdf
- * Stream the PDF file from ImageKit for the given note.
+ * Redirect to the PDF file from ImageKit for the given note.
  */
 export const streamNotePdf = async (req, res, next) => {
   try {
@@ -61,34 +61,8 @@ export const streamNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
 
-    const fetchOptions = { headers: {} };
-    if (req.headers.range) {
-      fetchOptions.headers['Range'] = req.headers.range;
-    }
-
-    const response = await fetch(note.pdfUrl, fetchOptions);
-
-    if (!response.ok) {
-      return res.status(response.status).send('Failed to fetch PDF from storage');
-    }
-
-    res.status(response.status);
-    res.setHeader('Content-Type', 'application/pdf');
-    // Expose headers for PDF.js to handle byte-ranges over CORS
-    res.setHeader('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified');
-
-    const headersToForward = ['content-length', 'accept-ranges', 'content-range', 'etag', 'last-modified'];
-    for (const header of headersToForward) {
-      if (response.headers.has(header)) {
-        res.setHeader(header, response.headers.get(header));
-      }
-    }
-
-    if (response.body) {
-      Readable.fromWeb(response.body).pipe(res);
-    } else {
-      res.end();
-    }
+    // Redirect directly to the CDN URL to avoid serverless payload size limits (6MB)
+    res.redirect(302, note.pdfUrl);
   } catch (error) {
     next(error);
   }
