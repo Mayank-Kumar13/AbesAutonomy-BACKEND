@@ -13,6 +13,7 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import metaRoutes from './routes/metaRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import activityRoutes from './routes/activityRoutes.js';
 
 const app = express();
 // ─── Render / Reverse Proxy ──────────────────────────
@@ -72,6 +73,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/activity', activityRoutes);
 
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {
