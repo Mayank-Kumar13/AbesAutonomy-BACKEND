@@ -1,5 +1,9 @@
 import rateLimit from 'express-rate-limit';
 
+const keyGenerator = (req) => {
+  return req.ip || req.headers['x-forwarded-for'] || req.headers['x-nf-client-connection-ip'] || 'unknown';
+};
+
 /**
  * General API rate limiter.
  */
@@ -8,6 +12,8 @@ export const apiLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
   message: {
     success: false,
     message: 'Too many requests. Please try again later.',
@@ -22,6 +28,8 @@ export const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again later.',
@@ -36,6 +44,8 @@ export const uploadLimiter = rateLimit({
   max: 50,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
   message: {
     success: false,
     message: 'Upload limit reached. Please try again later.',

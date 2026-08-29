@@ -26,7 +26,7 @@ app.use(cors({
   origin: env.FRONTEND_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'Accept'],
 }));
 
 // ─── Body parsing ────────────────────────────────────

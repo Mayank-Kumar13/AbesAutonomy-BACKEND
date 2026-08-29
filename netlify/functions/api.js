@@ -2,7 +2,11 @@ import serverless from 'serverless-http';
 import app from '../../src/app.js';
 import connectDB from '../../src/config/db.js';
 
-// Initialize the database connection
-connectDB().catch(console.error);
-
-export const handler = serverless(app);
+export const handler = async (event, context) => {
+  // Ensure we are connected to the database before handling the request
+  await connectDB();
+  const serverlessHandler = serverless(app, {
+    binary: ['application/pdf', 'image/*']
+  });
+  return serverlessHandler(event, context);
+};
