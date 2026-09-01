@@ -27,7 +27,9 @@ export const forgotPassword = async (req, res, next) => {
       });
 
       const resetLink = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
-      await sendResetEmail(user.email, resetLink);
+      sendResetEmail(user.email, resetLink).catch((err) =>
+        console.error('[DIAGNOSTIC] Reset email failed:', err.message)
+      );
     }
 
     return ApiResponse.success(res, null, 'If that email exists, a reset link has been sent');

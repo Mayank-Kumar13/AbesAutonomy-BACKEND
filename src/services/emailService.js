@@ -10,7 +10,10 @@ const getTransporter = () => {
       user: env.SMTP_USER,
       pass: env.SMTP_PASSWORD,
     },
-    family: 4, // Force IPv4 to prevent ENETUNREACH in Render
+    family: 4,
+    connectionTimeout: 10000, // 10s
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 };
 
