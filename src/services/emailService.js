@@ -10,6 +10,7 @@ const getTransporter = () => {
       user: env.SMTP_USER,
       pass: env.SMTP_PASSWORD,
     },
+    family: 4, // Force IPv4 to prevent ENETUNREACH in Render
   });
 };
 
