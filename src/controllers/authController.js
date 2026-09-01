@@ -55,6 +55,7 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
+    console.log('[DIAGNOSTIC] Login OTP controller reached');
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+password');

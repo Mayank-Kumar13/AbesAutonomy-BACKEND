@@ -66,6 +66,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // ─── API Routes ──────────────────────────────────────
+app.use((req, res, next) => {
+  console.log(`[DIAGNOSTIC] ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
+  next();
+});
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', oauthRoutes);

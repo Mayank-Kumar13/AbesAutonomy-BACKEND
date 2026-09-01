@@ -24,12 +24,19 @@ export const sendResetEmail = async (toEmail, resetLink) => {
   }
 
   const transporter = getTransporter();
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to: toEmail,
-    subject,
-    text,
-  });
+  console.log('[DIAGNOSTIC] SMTP send started (Reset Email)');
+  try {
+    await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to: toEmail,
+      subject,
+      text,
+    });
+    console.log('[DIAGNOSTIC] SMTP send succeeded (Reset Email)');
+  } catch (err) {
+    console.log('[DIAGNOSTIC] SMTP send failed (Reset Email):', err.message);
+    throw err;
+  }
 };
 
 export const sendLoginNotificationEmail = async (toEmail, { provider, time }) => {
@@ -51,6 +58,7 @@ export const sendLoginNotificationEmail = async (toEmail, { provider, time }) =>
 };
 
 export const sendOtpEmail = async (toEmail, otp) => {
+  console.log('[DIAGNOSTIC] OTP email function called');
   const subject = 'Your ABES Autonomy verification code';
   const text = `Your OTP is: ${otp}\n\nValid for 10 minutes. Do not share this code with anyone.`;
 
@@ -60,10 +68,17 @@ export const sendOtpEmail = async (toEmail, otp) => {
   }
 
   const transporter = getTransporter();
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to: toEmail,
-    subject,
-    text,
-  });
+  console.log('[DIAGNOSTIC] SMTP send started (OTP Email)');
+  try {
+    await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to: toEmail,
+      subject,
+      text,
+    });
+    console.log('[DIAGNOSTIC] SMTP send succeeded (OTP Email)');
+  } catch (err) {
+    console.log('[DIAGNOSTIC] SMTP send failed (OTP Email):', err.message);
+    throw err;
+  }
 };

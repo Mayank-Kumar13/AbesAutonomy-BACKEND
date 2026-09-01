@@ -12,6 +12,7 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
  */
 export const forgotPassword = async (req, res, next) => {
   try {
+    console.log('[DIAGNOSTIC] Forgot password controller reached');
     const { email } = req.body;
     const user = await User.findOne({ email });
 
