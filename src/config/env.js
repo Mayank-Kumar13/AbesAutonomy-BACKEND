@@ -37,6 +37,7 @@ const env = {
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASSWORD: process.env.SMTP_PASSWORD || '',
   SMTP_FROM: process.env.SMTP_FROM || 'no-reply@abesautonomy.local',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
 };
 
 export default env;
