@@ -39,25 +39,22 @@ export const createReview = async (req, res, next) => {
 
     const existingReview = await Review.findOne({ user: userId });
 
-    // Upsert: create or update if user already has a review
-    const review = await Review.findOneAndUpdate(
-      { user: userId },
-      {
-        user: userId,
-        displayName,
-        rating,
-        content,
-        approved: true,
-      },
-      { upsert: true, new: true, runValidators: true }
-    );
+    if (existingReview) {
+      return ApiResponse.badRequest(res, 'You have already submitted a review. Only 1 review is allowed per user.');
+    }
+
+    const review = await Review.create({
+      user: userId,
+      displayName,
+      rating,
+      content,
+      approved: true,
+    });
 
     // Send appreciation email only if this is their first time submitting a review
-    if (!existingReview) {
-      sendReviewAppreciationEmail(req.user.email, displayName).catch(err => 
-        console.error('[DIAGNOSTIC] Appreciation email failed:', err.message)
-      );
-    }
+    sendReviewAppreciationEmail(req.user.email, displayName).catch(err => 
+      console.error('[DIAGNOSTIC] Appreciation email failed:', err.message)
+    );
 
     return ApiResponse.created(res, review, 'Review submitted successfully');
   } catch (error) {
