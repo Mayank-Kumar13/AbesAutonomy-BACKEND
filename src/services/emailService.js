@@ -208,3 +208,28 @@ export const sendOtpEmail = async (toEmail, otp) => {
     throw err;
   }
 };
+
+export const sendReviewAppreciationEmail = async (toEmail, userName) => {
+  const subject = 'Thank You for Your Feedback! - ABES Autonomy';
+  const text = `Hi ${userName},\n\nThank you for taking the time to leave a review! Your feedback helps us improve ABES Autonomy for everyone.\n\nBest regards,\nThe ABES Autonomy Team`;
+
+  const htmlContent = `
+    <h2>Thank You for Your Feedback!</h2>
+    <p>Hi ${userName},</p>
+    <p>We just wanted to reach out and say a huge <strong>thank you</strong> for taking the time to leave a review.</p>
+    <div style="background-color: #f1f5f9; padding: 20px; margin: 25px 0; border-radius: 8px; text-align: center;">
+      <p style="font-size: 18px; color: #4f46e5; margin: 0; font-weight: 600;">Your feedback means the world to us! 🌟</p>
+    </div>
+    <p>Every review helps us understand what we're doing right and where we can improve ABES Autonomy for all students.</p>
+    <p style="margin-bottom: 0;">Best regards,<br><strong>The ABES Autonomy Team</strong></p>
+  `;
+
+  const html = getBaseHtml(subject, htmlContent);
+
+  try {
+    await sendBrevoEmail(toEmail, subject, text, html);
+  } catch (err) {
+    console.error('Brevo Review Appreciation Email failed:', err.message);
+    // Don't throw to prevent breaking the review flow
+  }
+};

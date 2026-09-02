@@ -1,5 +1,6 @@
 import Review from '../models/Review.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { sendReviewAppreciationEmail } from '../services/emailService.js';
 
 /**
  * GET /api/reviews
@@ -36,6 +37,8 @@ export const createReview = async (req, res, next) => {
     const userId = req.user._id;
     const displayName = req.user.name;
 
+    const existingReview = await Review.findOne({ user: userId });
+
     // Upsert: create or update if user already has a review
     const review = await Review.findOneAndUpdate(
       { user: userId },
@@ -48,6 +51,13 @@ export const createReview = async (req, res, next) => {
       },
       { upsert: true, new: true, runValidators: true }
     );
+
+    // Send appreciation email only if this is their first time submitting a review
+    if (!existingReview) {
+      sendReviewAppreciationEmail(req.user.email, displayName).catch(err => 
+        console.error('[DIAGNOSTIC] Appreciation email failed:', err.message)
+      );
+    }
 
     return ApiResponse.created(res, review, 'Review submitted successfully');
   } catch (error) {

@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import LoginLog from '../models/LoginLog.js';
+import Review from '../models/Review.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // active in last 5 min = "live"
@@ -63,6 +64,49 @@ export const getLogs = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const logs = await LoginLog.find().sort({ createdAt: -1 }).limit(limit);
     return ApiResponse.success(res, logs);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/reviews
+ */
+export const getReviews = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      Review.find()
+        .populate('user', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Review.countDocuments(),
+    ]);
+
+    return ApiResponse.paginated(res, reviews, page, limit, total);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/admin/reviews/:id
+ */
+export const deleteReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const review = await Review.findByIdAndDelete(id);
+
+    if (!review) {
+      return ApiResponse.notFound(res, 'Review not found');
+    }
+
+    return ApiResponse.success(res, null, 'Review deleted successfully by admin');
   } catch (error) {
     next(error);
   }
