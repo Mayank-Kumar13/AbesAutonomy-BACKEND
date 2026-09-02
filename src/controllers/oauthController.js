@@ -60,6 +60,7 @@ export const googleCallback = async (req, res) => {
     const accessToken = await exchangeGoogleCode(code);
     const profile = await getGoogleProfile(accessToken);
 
+    console.log('[DIAGNOSTIC] googleCallback GET: Authenticating user:', profile.email);
     const user = await findOrCreateOAuthUser({
       provider: 'google',
       providerId: profile.sub,
@@ -76,13 +77,15 @@ export const googleCallback = async (req, res) => {
     }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
-    res.cookie('token', token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
       domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    };
+    res.cookie('token', token, cookieOptions);
+    console.log('[DIAGNOSTIC] googleCallback GET: Setting cookie and redirecting. Cookie Options:', cookieOptions);
     res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('Google OAuth error:', error.message);
@@ -102,6 +105,7 @@ export const googleCallbackPost = async (req, res) => {
     const accessToken = await exchangeGoogleCode(code);
     const profile = await getGoogleProfile(accessToken);
 
+    console.log('[DIAGNOSTIC] googleCallback POST: Authenticating user:', profile.email);
     const user = await findOrCreateOAuthUser({
       provider: 'google',
       providerId: profile.sub,
@@ -118,6 +122,15 @@ export const googleCallbackPost = async (req, res) => {
     }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
+    const cookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('token', token, cookieOptions);
+    console.log('[DIAGNOSTIC] googleCallback POST: Setting cookie and returning JSON. Cookie Options:', cookieOptions);
     res.json({ success: true, token, user });
   } catch (error) {
     console.error('Google OAuth error (POST):', error.message);
