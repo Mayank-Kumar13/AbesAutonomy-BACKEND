@@ -62,33 +62,55 @@ export const sendOtpEmail = async (toEmail, otp) => {
   const subject = 'Your ABES Autonomy verification code';
   const text = `Your OTP is: ${otp}\n\nValid for 10 minutes. Do not share this code with anyone.`;
 
-  if (!env.BREVO_API_KEY) {
-    console.log(`[DEV EMAIL] OTP requested for ${toEmail} (OTP not logged in production).`);
-    return;
-  }
+  // Try Brevo first (preferred for OTP)
+  if (env.BREVO_API_KEY) {
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': env.BREVO_API_KEY
+        },
+        body: JSON.stringify({
+          sender: { email: env.SMTP_FROM, name: 'ABES Autonomy' },
+          to: [{ email: toEmail }],
+          subject,
+          textContent: text
+        })
+      });
 
-  try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'api-key': env.BREVO_API_KEY
-      },
-      body: JSON.stringify({
-        sender: { email: env.SMTP_FROM, name: 'ABES Autonomy' },
-        to: [{ email: toEmail }],
-        subject,
-        textContent: text
-      })
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(`Brevo API Error: ${response.status} ${errData.message || ''}`);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`Brevo API Error: ${response.status} ${errData.message || ''}`);
+      }
+      return; // Brevo succeeded
+    } catch (err) {
+      console.error('Brevo OTP send failed, trying Resend fallback:', err.message);
+      // Fall through to Resend
     }
-  } catch (err) {
-    console.error('SMTP send failed (OTP Email):', err.message);
-    throw err;
   }
+
+  // Fallback to Resend (already configured on production)
+  if (env.RESEND_API_KEY) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: env.SMTP_FROM,
+        to: toEmail,
+        subject,
+        text,
+      });
+
+      if (error) {
+        throw error;
+      }
+      return; // Resend succeeded
+    } catch (err) {
+      console.error('Resend OTP send failed:', err.message);
+      throw err;
+    }
+  }
+
+  // Neither provider configured — dev/test mode
+  console.log(`[DEV EMAIL] OTP requested for ${toEmail} (OTP not logged in production).`);
 };
