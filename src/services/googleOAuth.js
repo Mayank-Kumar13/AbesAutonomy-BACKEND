@@ -28,8 +28,13 @@ export const exchangeGoogleCode = async (code) => {
       grant_type: 'authorization_code',
     }),
   });
-  if (!res.ok) throw new Error('Failed to exchange Google code');
+  
   const data = await res.json();
+  if (!res.ok) {
+    console.error('Google token exchange failed:', data);
+    throw new Error(`Failed to exchange Google code: ${data.error_description || data.error || 'Unknown error'}`);
+  }
+  
   return data.access_token;
 };
 
@@ -37,6 +42,12 @@ export const getGoogleProfile = async (accessToken) => {
   const res = await fetch(GOOGLE_USERINFO_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error('Failed to fetch Google profile');
-  return res.json();
+  
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('Google profile fetch failed:', data);
+    throw new Error(`Failed to fetch Google profile: ${data.error_description || data.error || 'Unknown error'}`);
+  }
+  
+  return data;
 };
