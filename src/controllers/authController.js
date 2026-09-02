@@ -14,6 +14,14 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const generateOtp = () => String(crypto.randomInt(100000, 999999));
 
 const issueOtp = async (userId, email, purpose) => {
+  const existingOtp = await OtpToken.findOne({ userId, purpose }).sort({ createdAt: -1 });
+  if (existingOtp) {
+    const timeSinceLastOtp = Date.now() - new Date(existingOtp.createdAt).getTime();
+    if (timeSinceLastOtp < 60 * 1000) {
+      throw new Error(`COOLDOWN:${Math.ceil((60000 - timeSinceLastOtp) / 1000)}`);
+    }
+  }
+
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, 10);
   await OtpToken.deleteMany({ userId, purpose });
@@ -47,6 +55,10 @@ export const register = async (req, res, next) => {
       'OTP sent to your email. Please verify to complete signup.'
     );
   } catch (error) {
+    if (error.message && error.message.startsWith('COOLDOWN:')) {
+      const seconds = error.message.split(':')[1];
+      return ApiResponse.badRequest(res, `Please wait ${seconds} seconds before requesting a new OTP.`);
+    }
     next(error);
   }
 };
@@ -78,6 +90,10 @@ export const login = async (req, res, next) => {
       'OTP sent to your email. Please verify to continue.'
     );
   } catch (error) {
+    if (error.message && error.message.startsWith('COOLDOWN:')) {
+      const seconds = error.message.split(':')[1];
+      return ApiResponse.badRequest(res, `Please wait ${seconds} seconds before requesting a new OTP.`);
+    }
     next(error);
   }
 };
@@ -185,6 +201,10 @@ export const resendOtp = async (req, res, next) => {
 
     return ApiResponse.success(res, null, 'OTP resent to your email.');
   } catch (error) {
+    if (error.message && error.message.startsWith('COOLDOWN:')) {
+      const seconds = error.message.split(':')[1];
+      return ApiResponse.badRequest(res, `Please wait ${seconds} seconds before requesting a new OTP.`);
+    }
     next(error);
   }
 };
