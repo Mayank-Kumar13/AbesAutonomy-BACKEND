@@ -111,3 +111,57 @@ export const deleteReview = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * DELETE /api/admin/users/:id
+ */
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      return ApiResponse.notFound(res, 'User not found');
+    }
+
+    return ApiResponse.success(res, null, 'User deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/admin/users/:id/role
+ */
+export const updateUserRole = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['user', 'admin'].includes(role)) {
+      return ApiResponse.badRequest(res, 'Invalid role specified');
+    }
+
+    const user = await User.findByIdAndUpdate(id, { role }, { new: true, runValidators: true });
+
+    if (!user) {
+      return ApiResponse.notFound(res, 'User not found');
+    }
+
+    return ApiResponse.success(res, user.toSafeJSON(), 'User role updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/admin/logs
+ */
+export const clearLogs = async (req, res, next) => {
+  try {
+    await LoginLog.deleteMany({});
+    return ApiResponse.success(res, null, 'All login logs cleared successfully');
+  } catch (error) {
+    next(error);
+  }
+};
