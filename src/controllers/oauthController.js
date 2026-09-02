@@ -84,6 +84,41 @@ export const googleCallback = async (req, res) => {
 };
 
 /**
+ * POST /api/auth/google/callback
+ */
+export const googleCallbackPost = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Authorization code is required' });
+    }
+    const accessToken = await exchangeGoogleCode(code);
+    const profile = await getGoogleProfile(accessToken);
+
+    const user = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerId: profile.sub,
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture,
+    });
+
+    await recordLogin(user);
+
+    sendLoginNotificationEmail(user.email, {
+      provider: 'Google',
+      time: new Date().toLocaleString(),
+    }).catch((err) => console.error('Login email failed:', err.message));
+
+    const token = generateToken(user);
+    res.json({ success: true, token, user });
+  } catch (error) {
+    console.error('Google OAuth error (POST):', error.message);
+    res.status(500).json({ success: false, message: 'Google OAuth failed' });
+  }
+};
+
+/**
  * GET /api/auth/github
  */
 export const githubLogin = (req, res) => {
@@ -119,5 +154,40 @@ export const githubCallback = async (req, res) => {
   } catch (error) {
     console.error('GitHub OAuth error:', error.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=github_oauth_failed`);
+  }
+};
+
+/**
+ * POST /api/auth/github/callback
+ */
+export const githubCallbackPost = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Authorization code is required' });
+    }
+    const accessToken = await exchangeGithubCode(code);
+    const profile = await getGithubProfile(accessToken);
+
+    const user = await findOrCreateOAuthUser({
+      provider: 'github',
+      providerId: String(profile.id),
+      email: profile.email,
+      name: profile.name || profile.login,
+      picture: profile.avatar_url,
+    });
+
+    await recordLogin(user);
+
+    sendLoginNotificationEmail(user.email, {
+      provider: 'GitHub',
+      time: new Date().toLocaleString(),
+    }).catch((err) => console.error('Login email failed:', err.message));
+
+    const token = generateToken(user);
+    res.json({ success: true, token, user });
+  } catch (error) {
+    console.error('GitHub OAuth error (POST):', error.message);
+    res.status(500).json({ success: false, message: 'GitHub OAuth failed' });
   }
 };
