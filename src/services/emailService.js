@@ -5,7 +5,7 @@ const getBaseHtml = (title, content) => `
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>\${title}</title>
+  <title>${title}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -92,7 +92,7 @@ const getBaseHtml = (title, content) => `
       <h1>ABES Autonomy</h1>
     </div>
     <div class="content">
-      \${content}
+      ${content}
     </div>
     <div class="footer">
       <p>This is an automated message from ABES Autonomy. Please do not reply.</p>
@@ -104,7 +104,7 @@ const getBaseHtml = (title, content) => `
 
 const sendBrevoEmail = async (toEmail, subject, text, html) => {
   if (!env.BREVO_API_KEY) {
-    console.log(\`[DEV EMAIL] To: \${toEmail} | Subject: \${subject}\`);
+    console.log(`[DEV EMAIL] To: ${toEmail} | Subject: ${subject}`);
     return;
   }
 
@@ -126,28 +126,28 @@ const sendBrevoEmail = async (toEmail, subject, text, html) => {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(\`Brevo API Error: \${response.status} \${errData.message || ''}\`);
+    throw new Error(`Brevo API Error: ${response.status} ${errData.message || ''}`);
   }
 };
 
 export const sendResetEmail = async (toEmail, resetLink) => {
   const subject = 'Reset your ABES Autonomy password';
-  const text = \`You requested a password reset.\n\nClick the link below to set a new password (valid for 30 minutes):\n\${resetLink}\n\nIf you did not request this, ignore this email.\`;
+  const text = `You requested a password reset.\n\nClick the link below to set a new password (valid for 30 minutes):\n${resetLink}\n\nIf you did not request this, ignore this email.`;
 
-  const htmlContent = \`
+  const htmlContent = `
     <h2>Password Reset Request</h2>
     <p>Hello,</p>
     <p>We received a request to reset the password for your ABES Autonomy account. You can set a new password by clicking the button below:</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="\${resetLink}" class="btn">Reset Password</a>
+      <a href="${resetLink}" class="btn">Reset Password</a>
     </div>
     <p style="font-size: 14px; color: #64748b;">Or copy and paste this link into your browser:</p>
     <p style="word-break: break-all; color: #4f46e5; font-size: 14px;">
-      <a href="\${resetLink}" style="color: #4f46e5;">\${resetLink}</a>
+      <a href="${resetLink}" style="color: #4f46e5;">${resetLink}</a>
     </p>
     <p>This link is valid for <strong>30 minutes</strong>.</p>
     <p style="margin-bottom: 0;">If you did not request a password reset, please safely ignore this email.</p>
-  \`;
+  `;
 
   const html = getBaseHtml(subject, htmlContent);
 
@@ -163,19 +163,19 @@ export const sendResetEmail = async (toEmail, resetLink) => {
 
 export const sendLoginNotificationEmail = async (toEmail, { provider, time }) => {
   const subject = 'New login to your ABES Autonomy account';
-  const text = \`Hi,\n\nA new login to your ABES Autonomy account was just detected.\n\nMethod: \${provider}\nTime: \${time}\n\nIf this was you, no action is needed. If you don't recognize this login, please reset your password immediately.\`;
+  const text = `Hi,\n\nA new login to your ABES Autonomy account was just detected.\n\nMethod: ${provider}\nTime: ${time}\n\nIf this was you, no action is needed. If you don't recognize this login, please reset your password immediately.`;
 
-  const htmlContent = \`
+  const htmlContent = `
     <h2>New Login Detected</h2>
     <p>Hello,</p>
     <p>We noticed a new login to your ABES Autonomy account.</p>
     <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #f59e0b; margin: 25px 0; border-radius: 4px;">
-      <p style="margin: 0 0 10px 0; color: #334155;"><strong>Authentication Method:</strong> <span class="highlight">\${provider}</span></p>
-      <p style="margin: 0; color: #334155;"><strong>Time:</strong> <span class="highlight">\${time}</span></p>
+      <p style="margin: 0 0 10px 0; color: #334155;"><strong>Authentication Method:</strong> <span class="highlight">${provider}</span></p>
+      <p style="margin: 0; color: #334155;"><strong>Time:</strong> <span class="highlight">${time}</span></p>
     </div>
     <p>If this was you, no further action is required.</p>
     <p style="margin-bottom: 0;">If you do <strong>not</strong> recognize this login, please reset your password immediately and contact support.</p>
-  \`;
+  `;
 
   const html = getBaseHtml(subject, htmlContent);
 
@@ -189,15 +189,15 @@ export const sendLoginNotificationEmail = async (toEmail, { provider, time }) =>
 
 export const sendOtpEmail = async (toEmail, otp) => {
   const subject = 'Your ABES Autonomy Verification Code';
-  const text = \`Your OTP is: \${otp}\n\nValid for 10 minutes. Do not share this code with anyone.\`;
+  const text = `Your OTP is: ${otp}\n\nValid for 10 minutes. Do not share this code with anyone.`;
 
-  const htmlContent = \`
+  const htmlContent = `
     <h2>Verification Code</h2>
     <p>Hello,</p>
     <p>Please use the verification code below to complete your authentication process. This code is valid for <strong>10 minutes</strong>.</p>
-    <div class="otp-box">\${otp}</div>
+    <div class="otp-box">${otp}</div>
     <p style="margin-bottom: 0;">If you did not request this code, please ignore this email or contact support if you have concerns.</p>
-  \`;
+  `;
 
   const html = getBaseHtml(subject, htmlContent);
 
