@@ -174,7 +174,7 @@ export const sendLoginNotificationEmail = async (toEmail, { provider, time }) =>
       <p style="margin: 0; color: #334155;"><strong>Time:</strong> <span class="highlight">${time}</span></p>
     </div>
     <p>If this was you, no further action is required.</p>
-    <p style="margin-bottom: 0;">If you do <strong>not</strong> recognize this login, please reset your password immediately and contact support.</p>
+    <p style="margin-bottom: 0;">If you do <strong>not</strong> recognize this login, please reset your password immediately and contact support at <strong>abesautonomy30@gmail.com</strong>.</p>
   `;
 
   const html = getBaseHtml(subject, htmlContent);
@@ -196,7 +196,7 @@ export const sendOtpEmail = async (toEmail, otp) => {
     <p>Hello,</p>
     <p>Please use the verification code below to complete your authentication process. This code is valid for <strong>10 minutes</strong>.</p>
     <div class="otp-box">${otp}</div>
-    <p style="margin-bottom: 0;">If you did not request this code, please ignore this email or contact support if you have concerns.</p>
+    <p style="margin-bottom: 0;">If you did not request this code, please ignore this email or contact support at <strong>abesautonomy30@gmail.com</strong> if you have concerns.</p>
   `;
 
   const html = getBaseHtml(subject, htmlContent);
