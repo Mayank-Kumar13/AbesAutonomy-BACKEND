@@ -212,6 +212,14 @@ export const githubCallbackPost = async (req, res) => {
     }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
+    const cookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('token', token, cookieOptions);
     res.json({ success: true, token, user });
   } catch (error) {
     console.error('GitHub OAuth error (POST):', error.message);

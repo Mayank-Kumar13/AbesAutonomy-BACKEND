@@ -6,6 +6,7 @@ import LoginLog from '../models/LoginLog.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendLoginNotificationEmail, sendOtpEmail } from '../services/emailService.js';
+import env from '../config/env.js';
 
 const MAX_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -137,6 +138,14 @@ export const verifyOtp = async (req, res, next) => {
     });
 
     const token = generateToken(user);
+    const cookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('token', token, cookieOptions);
 
     if (purpose === 'login') {
       sendLoginNotificationEmail(user.email, {
