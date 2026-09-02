@@ -121,6 +121,11 @@ app.get('/api/health', (req, res) => {
     message: 'ABES Autonomy API is running',
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
+    emailConfig: {
+      brevoConfigured: !!env.BREVO_API_KEY,
+      resendConfigured: !!env.RESEND_API_KEY,
+      smtpFrom: env.SMTP_FROM,
+    },
   });
 });
 
