@@ -9,13 +9,18 @@ import ApiResponse from '../utils/ApiResponse.js';
  */
 export const requireAuth = async (req, res, next) => {
   try {
+    let token;
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return ApiResponse.unauthorized(res, 'Access denied. No token provided.');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
     }
 
-    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return ApiResponse.unauthorized(res, 'Access denied. No token provided.');
+    }
 
     const decoded = jwt.verify(token, env.JWT_SECRET);
     const user = await User.findById(decoded.id);
@@ -42,9 +47,15 @@ export const requireAuth = async (req, res, next) => {
  */
 export const optionalAuth = async (req, res, next) => {
   try {
+    let token;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    if (token) {
       const decoded = jwt.verify(token, env.JWT_SECRET);
       const user = await User.findById(decoded.id);
       if (user) req.user = user;

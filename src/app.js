@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import env from './config/env.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
+import cookieParser from 'cookie-parser';
 
 // Route imports
 import noteRoutes from './routes/noteRoutes.js';
@@ -84,6 +85,8 @@ app.use(
     limit: '10mb',
   })
 );
+
+app.use(cookieParser());
 
 // ─── Custom MongoDB query sanitization ───────────────
 const sanitize = (obj) => {

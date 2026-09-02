@@ -38,6 +38,7 @@ router.post('/reset-password', authLimiter, resetPasswordValidation, validate, r
 
 // ─── Protected routes ─────────────────────────────────
 router.get('/profile', requireAuth, getProfile);
+router.get('/me', requireAuth, getProfile); // Alias to support /auth/me constraint
 router.patch('/profile', requireAuth, updateProfileValidation, validate, updateProfile);
 
 export default router;

@@ -76,7 +76,13 @@ export const googleCallback = async (req, res) => {
     }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
-    res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect(`${env.FRONTEND_URL}`);
   } catch (error) {
     console.error('Google OAuth error:', error.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=google_oauth_failed`);
@@ -150,7 +156,13 @@ export const githubCallback = async (req, res) => {
     }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
-    res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect(`${env.FRONTEND_URL}`);
   } catch (error) {
     console.error('GitHub OAuth error:', error.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=github_oauth_failed`);
