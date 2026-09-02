@@ -16,23 +16,74 @@ import adminRoutes from './routes/adminRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 
 const app = express();
+
 // ─── Render / Reverse Proxy ──────────────────────────
 app.set('trust proxy', 1);
-// ─── Security middleware ─────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
 
-app.use(cors({
-  origin: env.FRONTEND_URL,
-  credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'Accept'],
-}));
+// ─── Security middleware ─────────────────────────────
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
+  })
+);
+
+// ─── CORS ─────────────────────────────────────────────
+const allowedOrigins = [
+  'https://abes.work',
+  'https://www.abes.work',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin
+      // (Postman, server-to-server, mobile apps, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+
+    credentials: true,
+
+    methods: [
+      'GET',
+      'POST',
+      'PATCH',
+      'PUT',
+      'DELETE',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Range',
+      'Accept',
+    ],
+  })
+);
 
 // ─── Body parsing ────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(
+  express.json({
+    limit: '10mb',
+  })
+);
+
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: '10mb',
+  })
+);
 
 // ─── Custom MongoDB query sanitization ───────────────
 const sanitize = (obj) => {
@@ -45,10 +96,15 @@ const sanitize = (obj) => {
       }
     }
   }
+
   return obj;
 };
+
 app.use((req, res, next) => {
-  if (req.body) sanitize(req.body);
+  if (req.body) {
+    sanitize(req.body);
+  }
+
   next();
 });
 
@@ -67,9 +123,13 @@ app.get('/api/health', (req, res) => {
 
 // ─── API Routes ──────────────────────────────────────
 app.use((req, res, next) => {
-  console.log(`[DIAGNOSTIC] ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
+  console.log(
+    `[DIAGNOSTIC] ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`
+  );
+
   next();
 });
+
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', oauthRoutes);
