@@ -13,8 +13,13 @@ export const requireAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    } else if (req.cookies && req.cookies.token) {
+      const extractedToken = authHeader.split(' ')[1];
+      if (extractedToken && extractedToken !== 'null' && extractedToken !== 'undefined') {
+        token = extractedToken;
+      }
+    }
+    
+    if (!token && req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
 
@@ -50,8 +55,13 @@ export const optionalAuth = async (req, res, next) => {
     let token;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    } else if (req.cookies && req.cookies.token) {
+      const extractedToken = authHeader.split(' ')[1];
+      if (extractedToken && extractedToken !== 'null' && extractedToken !== 'undefined') {
+        token = extractedToken;
+      }
+    }
+    
+    if (!token && req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
 

@@ -80,9 +80,10 @@ export const googleCallback = async (req, res) => {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.redirect(`${env.FRONTEND_URL}`);
+    res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('Google OAuth error:', error.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=google_oauth_failed`);
@@ -160,9 +161,10 @@ export const githubCallback = async (req, res) => {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.redirect(`${env.FRONTEND_URL}`);
+    res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('GitHub OAuth error:', error.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=github_oauth_failed`);
