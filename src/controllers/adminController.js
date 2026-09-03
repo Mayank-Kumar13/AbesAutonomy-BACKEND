@@ -17,6 +17,7 @@ export const getStats = async (req, res, next) => {
     const verifiedUsers = await User.countDocuments({ emailVerified: true });
 
     const watchAgg = await User.aggregate([
+      { $match: { role: { $ne: 'admin' } } },
       { $group: { _id: null, total: { $sum: '$totalWatchTimeMs' } } },
     ]);
     const totalWatchTimeMs = watchAgg[0]?.total || 0;
