@@ -14,7 +14,7 @@ const router = Router();
 router.use(requireAuth, requireAdmin);
 
 // Upload PDF file to ImageKit and create note
-router.post('/pdf', uploadLimiter, upload.single('pdf'), uploadPdfAndCreateNote);
+router.post('/pdf', uploadLimiter, upload.single('file'), uploadPdfAndCreateNote);
 
 // Register an existing ImageKit PDF in MongoDB
 router.post('/register', registerExistingPdf);

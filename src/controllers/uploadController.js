@@ -40,6 +40,14 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Subject is required.');
     }
 
+    if (!req.body.branch || req.body.branch.trim() === '') {
+      return ApiResponse.badRequest(res, 'Branch is required.');
+    }
+
+    if (!req.body.resourceType || req.body.resourceType.trim() === '') {
+      return ApiResponse.badRequest(res, 'Resource type is required.');
+    }
+
     // Upload to ImageKit
     let ikResult;
     try {
@@ -98,6 +106,14 @@ export const registerExistingPdf = async (req, res, next) => {
 
     if (!subject || subject.trim() === '') {
       return ApiResponse.badRequest(res, 'Subject is required.');
+    }
+
+    if (!branch || branch.trim() === '') {
+      return ApiResponse.badRequest(res, 'Branch is required.');
+    }
+
+    if (!resourceType || resourceType.trim() === '') {
+      return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
     const noteData = {
