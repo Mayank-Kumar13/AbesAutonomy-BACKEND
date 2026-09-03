@@ -133,6 +133,8 @@ app.use((req, res, next) => {
   next();
 });
 
+import settingsRoutes from './routes/settingsRoutes.js';
+
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', oauthRoutes);
@@ -141,6 +143,7 @@ app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {
