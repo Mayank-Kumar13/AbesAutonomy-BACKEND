@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
+    "bad-words": "^4.1.5",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

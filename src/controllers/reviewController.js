@@ -1,6 +1,11 @@
 import Review from '../models/Review.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { sendReviewAppreciationEmail } from '../services/emailService.js';
+import Filter from 'bad-words';
+
+const filter = new Filter();
+// Add common hindi slang just in case
+filter.addWords('chutiya', 'mc', 'bc', 'bhosdike', 'madarchod', 'bhenchod', 'gandu', 'randi', 'sala', 'saala', 'kutta', 'kaminey');
 
 /**
  * GET /api/reviews
@@ -36,6 +41,10 @@ export const createReview = async (req, res, next) => {
     const { rating, content } = req.body;
     const userId = req.user._id;
     const displayName = req.user.name;
+
+    if (filter.isProfane(content)) {
+      return ApiResponse.badRequest(res, 'Your review contains inappropriate language and cannot be submitted.');
+    }
 
     const existingReview = await Review.findOne({ user: userId });
 
