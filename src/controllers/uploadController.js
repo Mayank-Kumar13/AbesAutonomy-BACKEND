@@ -32,20 +32,29 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'No PDF file provided.');
     }
 
+    if (!req.body.title || req.body.title.trim() === '') {
+      return ApiResponse.badRequest(res, 'Title is required.');
+    }
+
+    if (!req.body.subject || req.body.subject.trim() === '') {
+      return ApiResponse.badRequest(res, 'Subject is required.');
+    }
+
     // Upload to ImageKit
     let ikResult;
     try {
-      const folder = `/notes/${req.body.branch || 'general'}/${req.body.subject || 'misc'}`;
+      const folder = `/notes/${req.body.branch || 'general'}/${req.body.subject.trim()}`;
       ikResult = await uploadPdf(req.file.buffer, req.file.originalname, folder);
     } catch (ikError) {
-      return ApiResponse.error(res, `ImageKit upload failed: ${ikError.message}`, 502);
+      console.error('ImageKit upload error:', ikError);
+      return ApiResponse.error(res, 'ImageKit upload failed. Please verify configuration.', 502);
     }
 
     // Create note in MongoDB
     const noteData = {
-      title: req.body.title || req.file.originalname.replace('.pdf', ''),
+      title: req.body.title.trim(),
       description: req.body.description || '',
-      subject: (req.body.subject || 'GENERAL').toUpperCase(),
+      subject: req.body.subject.trim().toUpperCase(),
       branch: (req.body.branch || 'common').toLowerCase(),
       year: parseInt(req.body.year, 10) || 1,
       resourceType: (req.body.resourceType || 'theory').toLowerCase(),
@@ -83,10 +92,18 @@ export const registerExistingPdf = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'PDF URL is required.');
     }
 
+    if (!title || title.trim() === '') {
+      return ApiResponse.badRequest(res, 'Title is required.');
+    }
+
+    if (!subject || subject.trim() === '') {
+      return ApiResponse.badRequest(res, 'Subject is required.');
+    }
+
     const noteData = {
-      title: title || 'Untitled Note',
+      title: title.trim(),
       description: description || '',
-      subject: (subject || 'GENERAL').toUpperCase(),
+      subject: subject.trim().toUpperCase(),
       branch: (branch || 'common').toLowerCase(),
       year: parseInt(year, 10) || 1,
       resourceType: (resourceType || 'theory').toLowerCase(),

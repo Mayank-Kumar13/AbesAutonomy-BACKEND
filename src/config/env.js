@@ -1,13 +1,24 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const requiredVars = ['MONGODB_URI', 'JWT_SECRET'];
+const requiredVars = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'IMAGEKIT_PUBLIC_KEY',
+  'IMAGEKIT_PRIVATE_KEY',
+  'IMAGEKIT_URL_ENDPOINT',
+];
 
 for (const varName of requiredVars) {
-  if (!process.env[varName]) {
+  if (!process.env[varName] || process.env[varName].trim() === '') {
     console.error(`❌ Missing required environment variable: ${varName}`);
     process.exit(1);
   }
+}
+
+if (process.env.IMAGEKIT_PRIVATE_KEY === 'your-imagekit-private-key') {
+  console.error(`❌ IMAGEKIT_PRIVATE_KEY still has the placeholder value. Please configure it in .env`);
+  process.exit(1);
 }
 
 const env = {

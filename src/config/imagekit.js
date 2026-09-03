@@ -10,10 +10,7 @@ let imagekit = null;
 export const getImageKit = () => {
   if (imagekit) return imagekit;
 
-  if (!env.IMAGEKIT_PRIVATE_KEY || env.IMAGEKIT_PRIVATE_KEY === 'your-imagekit-private-key') {
-    console.warn('⚠️  ImageKit credentials not configured. Upload/delete features disabled.');
-    return null;
-  }
+  // The env.js module ensures these variables are present on startup
 
   imagekit = new ImageKit({
     publicKey: env.IMAGEKIT_PUBLIC_KEY,
