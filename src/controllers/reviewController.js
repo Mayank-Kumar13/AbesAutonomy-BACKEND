@@ -1,7 +1,7 @@
 import Review from '../models/Review.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { sendReviewAppreciationEmail } from '../services/emailService.js';
-import Filter from 'bad-words';
+import { Filter } from 'bad-words';
 
 const filter = new Filter();
 // Add common hindi slang just in case
