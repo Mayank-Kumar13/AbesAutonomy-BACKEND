@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 const reviewSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -10,7 +12,7 @@ const reviewSchema = new mongoose.Schema({
 });
 const Review = mongoose.model('Review', reviewSchema);
 
-mongoose.connect('mongodb+srv://abesautonomy30_db_user:rRnZNI7vLMxYyOzw@abes.mvo7qih.mongodb.net/')
+mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     const res = await Review.find();
     console.log(res);
