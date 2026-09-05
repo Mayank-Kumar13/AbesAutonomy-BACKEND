@@ -1,7 +1,11 @@
 import rateLimit from 'express-rate-limit';
 
 const keyGenerator = (req) => {
-  return req.ip || req.headers['x-forwarded-for'] || req.headers['x-nf-client-connection-ip'] || 'unknown';
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.headers['x-nf-client-connection-ip'] || req.ip || 'unknown';
 };
 
 /**
