@@ -9,7 +9,7 @@ const keyGenerator = (req) => {
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  max: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -25,7 +25,7 @@ export const apiLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -41,7 +41,7 @@ export const authLimiter = rateLimit({
  */
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
