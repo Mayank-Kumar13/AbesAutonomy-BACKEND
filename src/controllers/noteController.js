@@ -3,6 +3,7 @@ import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
+import { logAdminActivity } from '../utils/logger.js';
 
 /**
  * GET /api/notes
@@ -94,6 +95,7 @@ export const createNote = async (req, res, next) => {
     };
 
     const note = await Note.create(noteData);
+    await logAdminActivity(req, 'UPLOAD_NOTE', `Uploaded note: ${note.title}`);
     return ApiResponse.created(res, note, 'Note created successfully');
   } catch (error) {
     next(error);
@@ -139,6 +141,7 @@ export const updateNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
+    await logAdminActivity(req, 'UPDATE_NOTE', `Updated note: ${note.title}`);
     return ApiResponse.success(res, note, 'Note updated successfully');
   } catch (error) {
     next(error);
@@ -168,6 +171,7 @@ export const deleteNote = async (req, res, next) => {
     }
 
     await Note.findByIdAndDelete(req.params.id);
+    await logAdminActivity(req, 'DELETE_NOTE', `Deleted note: ${note.title}`);
     return ApiResponse.success(res, null, 'Note deleted successfully');
   } catch (error) {
     next(error);

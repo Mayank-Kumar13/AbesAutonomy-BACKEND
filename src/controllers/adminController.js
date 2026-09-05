@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import LoginLog from '../models/LoginLog.js';
 import Review from '../models/Review.js';
+import AdminActivity from '../models/AdminActivity.js';
+import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // active in last 5 min = "live"
@@ -106,6 +108,8 @@ export const deleteReview = async (req, res, next) => {
     if (!review) {
       return ApiResponse.notFound(res, 'Review not found');
     }
+    
+    await logAdminActivity(req, 'DELETE_REVIEW', `Deleted review by ${review.displayName || 'unknown'}`);
 
     return ApiResponse.success(res, null, 'Review deleted successfully by admin');
   } catch (error) {
@@ -124,6 +128,8 @@ export const deleteUser = async (req, res, next) => {
     if (!user) {
       return ApiResponse.notFound(res, 'User not found');
     }
+    
+    await logAdminActivity(req, 'DELETE_USER', `Deleted user ${user.email}`);
 
     return ApiResponse.success(res, null, 'User deleted successfully');
   } catch (error) {
@@ -148,6 +154,8 @@ export const updateUserRole = async (req, res, next) => {
     if (!user) {
       return ApiResponse.notFound(res, 'User not found');
     }
+    
+    await logAdminActivity(req, 'UPDATE_ROLE', `Updated role of ${user.email} to ${role}`);
 
     return ApiResponse.success(res, user.toSafeJSON(), 'User role updated successfully');
   } catch (error) {
@@ -161,7 +169,21 @@ export const updateUserRole = async (req, res, next) => {
 export const clearLogs = async (req, res, next) => {
   try {
     await LoginLog.deleteMany({});
+    await logAdminActivity(req, 'CLEAR_LOGS', 'Cleared all login logs');
     return ApiResponse.success(res, null, 'All login logs cleared successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/activities
+ */
+export const getAdminActivities = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const activities = await AdminActivity.find().sort({ createdAt: -1 }).limit(limit);
+    return ApiResponse.success(res, activities);
   } catch (error) {
     next(error);
   }

@@ -1,5 +1,6 @@
 import Settings from '../models/Settings.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { logAdminActivity } from '../utils/logger.js';
 
 /**
  * GET /api/settings
@@ -39,6 +40,7 @@ export const updateSettings = async (req, res, next) => {
       await settings.save();
     }
 
+    await logAdminActivity(req, 'CHANGE_STATUS', `Changed website status to ${settings.websiteStatus}`);
     return ApiResponse.success(res, settings, 'Settings updated successfully');
   } catch (error) {
     next(error);
