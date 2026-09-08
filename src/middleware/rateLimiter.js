@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import SuspiciousIP from '../models/SuspiciousIP.js';
 
 const keyGenerator = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
@@ -6,6 +7,29 @@ const keyGenerator = (req) => {
     return forwarded.split(',')[0].trim();
   }
   return req.headers['x-nf-client-connection-ip'] || req.ip || 'unknown';
+};
+
+const handleSuspiciousIP = async (req, res, next, options) => {
+  try {
+    const ip = keyGenerator(req);
+    const existing = await SuspiciousIP.findOne({ ip });
+    
+    if (existing) {
+      existing.attemptCount += 1;
+      await existing.save();
+    } else {
+      await SuspiciousIP.create({
+        ip,
+        endpoint: req.originalUrl,
+        method: req.method,
+        userAgent: req.headers['user-agent'] || 'unknown',
+      });
+    }
+  } catch (error) {
+    console.error('Error logging suspicious IP:', error);
+  }
+  
+  res.status(options.statusCode).json(options.message);
 };
 
 /**
@@ -29,10 +53,11 @@ export const apiLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  handler: handleSuspiciousIP,
   validate: { xForwardedForHeader: false, default: true },
   message: {
     success: false,

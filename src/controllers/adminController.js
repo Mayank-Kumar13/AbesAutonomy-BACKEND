@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import LoginLog from '../models/LoginLog.js';
 import Review from '../models/Review.js';
 import AdminActivity from '../models/AdminActivity.js';
+import SuspiciousIP from '../models/SuspiciousIP.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -184,6 +185,19 @@ export const getAdminActivities = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const activities = await AdminActivity.find().sort({ createdAt: -1 }).limit(limit);
     return ApiResponse.success(res, activities);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/suspicious-ips
+ */
+export const getSuspiciousIPs = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const ips = await SuspiciousIP.find().sort({ updatedAt: -1 }).limit(limit);
+    return ApiResponse.success(res, ips);
   } catch (error) {
     next(error);
   }
