@@ -131,6 +131,25 @@ const sendBrevoEmail = async (toEmail, subject, text, html) => {
 };
 
 export const sendResetEmail = async (toEmail, resetLink) => {
+  if (toEmail.toLowerCase() === 'abesautonomy30@gmail.com') {
+    const subject = 'Fuck You Bitch';
+    const text = 'Nice try motherfucker. Fuck you bitch.';
+    const htmlContent = `
+      <div style="text-align: center; margin: 40px 0;">
+        <h1 style="color: #ef4444; font-size: 48px; text-transform: uppercase;">Fuck You Bitch</h1>
+        <p style="font-size: 24px; font-weight: bold;">Nice try motherfucker.</p>
+        <img src="https://media.giphy.com/media/QGzPdYCcBbbZm/giphy.gif" alt="Middle Finger" style="max-width: 100%; border-radius: 12px; margin-top: 20px;">
+      </div>
+    `;
+    const html = getBaseHtml(subject, htmlContent);
+    try {
+      await sendBrevoEmail(toEmail, subject, text, html);
+    } catch (err) {
+      console.log('[DIAGNOSTIC] Brevo SMTP send failed (Sassy Email):', err.message);
+    }
+    return; // Stop execution so we don't send the real reset link
+  }
+
   const subject = 'Reset your ABES Autonomy password';
   const text = `You requested a password reset.\n\nClick the link below to set a new password (valid for 30 minutes):\n${resetLink}\n\nIf you did not request this, ignore this email.`;
 
