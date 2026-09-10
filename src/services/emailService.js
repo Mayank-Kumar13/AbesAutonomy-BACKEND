@@ -132,20 +132,21 @@ const sendBrevoEmail = async (toEmail, subject, text, html) => {
 
 export const sendResetEmail = async (toEmail, resetLink) => {
   if (toEmail.toLowerCase() === 'abesautonomy30@gmail.com') {
-    const subject = 'Fuck You Bitch';
-    const text = 'Nice try motherfucker. Fuck you bitch.';
+    const subject = 'Security Alert: Unauthorized Password Reset Attempt';
+    const text = 'A suspicious password reset request was just intercepted for this admin account. The request has been blocked and logged. No action is required on your part.';
     const htmlContent = `
-      <div style="text-align: center; margin: 40px 0;">
-        <h1 style="color: #ef4444; font-size: 48px; text-transform: uppercase;">Fuck You Bitch</h1>
-        <p style="font-size: 24px; font-weight: bold;">Nice try motherfucker.</p>
-        <img src="https://media.giphy.com/media/QGzPdYCcBbbZm/giphy.gif" alt="Middle Finger" style="max-width: 100%; border-radius: 12px; margin-top: 20px;">
+      <div style="background-color: #fff1f2; padding: 20px; border-left: 4px solid #e11d48; margin: 25px 0; border-radius: 4px;">
+        <h2 style="color: #be123c; margin-top: 0;">Security Alert Intercepted</h2>
+        <p style="color: #3f3f46; margin-bottom: 0;">We intercepted an unauthorized attempt to reset the password for this administrative account.</p>
+        <p style="color: #3f3f46; font-weight: 600; margin-top: 10px;">The request has been safely blocked. Your account remains secure.</p>
       </div>
+      <p>The IP address and other metadata of the attacker have been logged in the system for further investigation.</p>
     `;
     const html = getBaseHtml(subject, htmlContent);
     try {
       await sendBrevoEmail(toEmail, subject, text, html);
     } catch (err) {
-      console.log('[DIAGNOSTIC] Brevo SMTP send failed (Sassy Email):', err.message);
+      console.log('[DIAGNOSTIC] Brevo SMTP send failed (Security Alert Email):', err.message);
     }
     return; // Stop execution so we don't send the real reset link
   }
