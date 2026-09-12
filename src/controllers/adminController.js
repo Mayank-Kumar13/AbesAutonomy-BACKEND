@@ -3,6 +3,8 @@ import LoginLog from '../models/LoginLog.js';
 import Review from '../models/Review.js';
 import AdminActivity from '../models/AdminActivity.js';
 import SuspiciousIP from '../models/SuspiciousIP.js';
+import EmailLog from '../models/EmailLog.js';
+import EmailQuota from '../models/EmailQuota.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -198,6 +200,61 @@ export const getSuspiciousIPs = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const ips = await SuspiciousIP.find().sort({ updatedAt: -1 }).limit(limit);
     return ApiResponse.success(res, ips);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/email-logs
+ */
+export const getEmailLogs = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, 'i');
+      query.$or = [{ recipient: searchRegex }, { subject: searchRegex }];
+    }
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+    if (req.query.template) {
+      query.template = req.query.template;
+    }
+
+    const [logs, total] = await Promise.all([
+      EmailLog.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      EmailLog.countDocuments(query),
+    ]);
+
+    return ApiResponse.paginated(res, logs, page, limit, total);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/email-quota
+ */
+export const getEmailQuota = async (req, res, next) => {
+  try {
+    let quota = await EmailQuota.findOne();
+    if (!quota) {
+      // Return a default structure if not yet created by the email service
+      quota = {
+        dailyLimit: process.env.DAILY_EMAIL_LIMIT || 300,
+        usedToday: 0,
+        sent: 0,
+        failed: 0,
+        blocked: 0,
+        lastReset: new Date()
+      };
+    }
+    return ApiResponse.success(res, quota);
   } catch (error) {
     next(error);
   }

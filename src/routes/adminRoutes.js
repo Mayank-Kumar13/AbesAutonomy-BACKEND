@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import { getStats, getUsers, getLogs, getReviews, deleteReview, deleteUser, updateUserRole, clearLogs, getAdminActivities, getSuspiciousIPs } from '../controllers/adminController.js';
+import { getStats, getUsers, getLogs, getReviews, deleteReview, deleteUser, updateUserRole, clearLogs, getAdminActivities, getSuspiciousIPs, getEmailLogs, getEmailQuota } from '../controllers/adminController.js';
 
 const router = Router();
 
@@ -16,5 +16,7 @@ router.get('/reviews', getReviews);
 router.delete('/reviews/:id', deleteReview);
 router.get('/activities', getAdminActivities);
 router.get('/suspicious-ips', getSuspiciousIPs);
+router.get('/email-logs', getEmailLogs);
+router.get('/email-quota', getEmailQuota);
 
 export default router;

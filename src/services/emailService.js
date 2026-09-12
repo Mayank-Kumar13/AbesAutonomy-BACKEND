@@ -1,5 +1,6 @@
 import env from '../config/env.js';
-
+import EmailLog from '../models/EmailLog.js';
+import EmailQuota from '../models/EmailQuota.js';
 const getBaseHtml = (title, content) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -102,31 +103,129 @@ const getBaseHtml = (title, content) => `
 </html>
 `;
 
-const sendBrevoEmail = async (toEmail, subject, text, html) => {
+const checkAndConsumeQuota = async (toEmail, subject, template) => {
+  if (!env.BREVO_API_KEY) return true; // dev mode
+  
+  let quota = await EmailQuota.findOne();
+  if (!quota) {
+    quota = new EmailQuota({ dailyLimit: env.DAILY_EMAIL_LIMIT || 300 });
+  }
+
+  // Reset check
+  const now = new Date();
+  const lastReset = new Date(quota.lastReset);
+  if (lastReset.getDate() !== now.getDate() || lastReset.getMonth() !== now.getMonth() || lastReset.getFullYear() !== now.getFullYear()) {
+    quota.usedToday = 0;
+    quota.lastReset = now;
+  }
+
+  if (quota.usedToday >= quota.dailyLimit) {
+    quota.blocked += 1;
+    await quota.save();
+
+    await EmailLog.create({
+      recipient: toEmail,
+      subject,
+      template,
+      status: 'QUOTA_EXCEEDED',
+      errorReason: 'Daily application email limit exceeded',
+    });
+    
+    throw new Error('QUOTA_EXCEEDED: Daily email limit reached');
+  }
+
+  await quota.save();
+  return true;
+};
+
+const handleEmailResult = async (toEmail, subject, template, err, messageId) => {
+  if (!env.BREVO_API_KEY) return;
+
+  let quota = await EmailQuota.findOne();
+  if (!quota) {
+    quota = new EmailQuota({ dailyLimit: env.DAILY_EMAIL_LIMIT || 300 });
+  }
+
+  if (err) {
+    const isQuotaError = err.message && (err.message.includes('402') || err.message.toLowerCase().includes('quota') || err.message.toLowerCase().includes('credit'));
+    
+    if (isQuotaError) {
+      quota.blocked += 1;
+      await EmailLog.create({
+        recipient: toEmail,
+        subject,
+        template,
+        status: 'QUOTA_EXCEEDED',
+        errorReason: err.message,
+      });
+    } else {
+      quota.failed += 1;
+      await EmailLog.create({
+        recipient: toEmail,
+        subject,
+        template,
+        status: 'FAILED',
+        errorReason: err.message,
+      });
+    }
+  } else {
+    quota.usedToday += 1;
+    quota.sent += 1;
+    await EmailLog.create({
+      recipient: toEmail,
+      subject,
+      template,
+      status: 'SENT',
+      messageId,
+      sentAt: new Date(),
+    });
+  }
+  await quota.save();
+};
+
+const sendBrevoEmail = async (toEmail, subject, text, html, template) => {
   if (!env.BREVO_API_KEY) {
     console.log(`[DEV EMAIL] To: ${toEmail} | Subject: ${subject}`);
     return;
   }
 
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'api-key': env.BREVO_API_KEY
-    },
-    body: JSON.stringify({
-      sender: { email: env.SMTP_FROM, name: 'ABES Autonomy' },
-      to: [{ email: toEmail }],
-      subject,
-      textContent: text,
-      htmlContent: html
-    })
-  });
+  try {
+    await checkAndConsumeQuota(toEmail, subject, template);
+  } catch (err) {
+    console.error('Email blocked by quota:', err.message);
+    throw err; // Stop sending
+  }
 
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(`Brevo API Error: ${response.status} ${errData.message || ''}`);
+  let messageId = null;
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': env.BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: { email: env.SMTP_FROM, name: 'ABES Autonomy' },
+        to: [{ email: toEmail }],
+        subject,
+        textContent: text,
+        htmlContent: html
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(`Brevo API Error: ${response.status} ${errData.message || ''}`);
+    }
+    
+    const data = await response.json();
+    messageId = data.messageId;
+    
+    await handleEmailResult(toEmail, subject, template, null, messageId);
+  } catch (err) {
+    await handleEmailResult(toEmail, subject, template, err, null);
+    throw err;
   }
 };
 
@@ -157,7 +256,7 @@ export const sendResetEmail = async (toEmail, resetLink) => {
 
   console.log('[DIAGNOSTIC] Brevo SMTP send started (Reset Email)');
   try {
-    await sendBrevoEmail(toEmail, subject, text, html);
+    await sendBrevoEmail(toEmail, subject, text, html, 'Password Reset');
     console.log('[DIAGNOSTIC] Brevo SMTP send succeeded (Reset Email)');
   } catch (err) {
     console.log('[DIAGNOSTIC] Brevo SMTP send failed (Reset Email):', err.message);
@@ -184,7 +283,7 @@ export const sendLoginNotificationEmail = async (toEmail, { provider, time }) =>
   const html = getBaseHtml(subject, htmlContent);
 
   try {
-    await sendBrevoEmail(toEmail, subject, text, html);
+    await sendBrevoEmail(toEmail, subject, text, html, 'Login Notification');
   } catch (err) {
     console.error('Brevo Login Notification failed:', err.message);
     throw err;
@@ -206,7 +305,7 @@ export const sendOtpEmail = async (toEmail, otp) => {
   const html = getBaseHtml(subject, htmlContent);
 
   try {
-    await sendBrevoEmail(toEmail, subject, text, html);
+    await sendBrevoEmail(toEmail, subject, text, html, 'OTP');
   } catch (err) {
     console.error('Brevo OTP send failed:', err.message);
     throw err;
@@ -231,7 +330,7 @@ export const sendReviewAppreciationEmail = async (toEmail, userName) => {
   const html = getBaseHtml(subject, htmlContent);
 
   try {
-    await sendBrevoEmail(toEmail, subject, text, html);
+    await sendBrevoEmail(toEmail, subject, text, html, 'Review Appreciation');
   } catch (err) {
     console.error('Brevo Review Appreciation Email failed:', err.message);
     // Don't throw to prevent breaking the review flow
