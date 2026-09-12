@@ -134,6 +134,7 @@ app.use((req, res, next) => {
 });
 
 import settingsRoutes from './routes/settingsRoutes.js';
+import subjectRoutes from './routes/subjectRoutes.js';
 
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
@@ -144,6 +145,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/subjects', subjectRoutes);
 
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {
