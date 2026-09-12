@@ -146,17 +146,10 @@ export const deleteUser = async (req, res, next) => {
 export const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role, assignedBranches } = req.body;
+    const { role } = req.body;
 
     if (!['user', 'admin', 'coordinator'].includes(role)) {
       return ApiResponse.badRequest(res, 'Invalid role specified');
-    }
-
-    const updateData = { role };
-    if (role === 'coordinator' && Array.isArray(assignedBranches)) {
-      updateData.assignedBranches = assignedBranches;
-    } else if (role !== 'coordinator') {
-      updateData.assignedBranches = [];
     }
 
     const user = await User.findById(id);
@@ -165,16 +158,13 @@ export const updateUserRole = async (req, res, next) => {
     }
 
     const previousRole = user.role;
-    const previousBranches = user.assignedBranches || [];
 
-    user.role = updateData.role;
-    user.assignedBranches = updateData.assignedBranches;
+    user.role = role;
+    user.assignedBranches = [];
     await user.save();
 
     if (role === 'coordinator' && previousRole !== 'coordinator') {
-      await logAdminActivity(req, 'COORDINATOR_ASSIGNED', `Assigned coordinator to ${user.email} with branches: ${updateData.assignedBranches.join(', ')}`, { role: user.role });
-    } else if (role === 'coordinator' && previousRole === 'coordinator') {
-      await logAdminActivity(req, 'COORDINATOR_BRANCH_UPDATED', `Updated branches for coordinator ${user.email} from [${previousBranches.join(', ')}] to [${updateData.assignedBranches.join(', ')}]`, { role: user.role });
+      await logAdminActivity(req, 'UPDATE_ROLE', `Assigned coordinator to ${user.email}`, { role: user.role });
     } else {
       await logAdminActivity(req, 'UPDATE_ROLE', `Updated role of ${user.email} to ${role}`, { role: user.role });
     }

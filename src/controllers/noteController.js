@@ -77,12 +77,6 @@ export const createNote = async (req, res, next) => {
   try {
     const requestedBranch = (req.body.branch || 'common').toLowerCase();
 
-    if (req.user && req.user.role === 'coordinator') {
-      const assigned = req.user.assignedBranches || [];
-      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
-      }
-    }
 
     const noteData = {
       title: req.body.title,
@@ -127,17 +121,6 @@ export const updateNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
-    if (req.user && req.user.role === 'coordinator') {
-      const assigned = req.user.assignedBranches || [];
-      // If branch is being updated, verify they have access to the new branch
-      const requestedBranch = req.body.branch ? req.body.branch.toLowerCase() : existingNote.branch;
-      if (!assigned.map(b => b.toLowerCase()).includes(existingNote.branch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to the existing branch: ${existingNote.branch}`);
-      }
-      if (req.body.branch && !assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to the new branch: ${requestedBranch}`);
-      }
-    }
 
     // Only allow specific fields to be updated
     const allowedFields = [
@@ -196,12 +179,6 @@ export const deleteNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
-    if (req.user && req.user.role === 'coordinator') {
-      const assigned = req.user.assignedBranches || [];
-      if (!assigned.map(b => b.toLowerCase()).includes(note.branch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${note.branch}`);
-      }
-    }
 
     // Attempt to delete from ImageKit if file ID exists
     if (note.imagekitFileId && req.query.deleteFile !== 'false') {

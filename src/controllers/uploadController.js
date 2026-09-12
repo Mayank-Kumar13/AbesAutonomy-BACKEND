@@ -51,12 +51,6 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
 
     const requestedBranch = (req.body.branch || 'common').toLowerCase();
 
-    if (req.user && req.user.role === 'coordinator') {
-      const assigned = req.user.assignedBranches || [];
-      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
-      }
-    }
 
     // Upload to ImageKit
     let ikResult;
@@ -135,12 +129,6 @@ export const registerExistingPdf = async (req, res, next) => {
 
     const requestedBranch = (branch || 'common').toLowerCase();
 
-    if (req.user && req.user.role === 'coordinator') {
-      const assigned = req.user.assignedBranches || [];
-      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
-        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
-      }
-    }
 
     const noteData = {
       title: title.trim(),
