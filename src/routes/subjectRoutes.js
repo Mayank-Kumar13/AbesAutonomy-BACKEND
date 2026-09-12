@@ -6,16 +6,18 @@ import {
   updateSubject,
   deleteSubject
 } from '../controllers/subjectController.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdmin, requireAdminOrCoordinator } from '../middleware/auth.js';
 
 const router = Router();
 
 // Public routes
 router.get('/', getSubjects);
 
-// Admin routes
+// Admin / Coordinator routes
+router.get('/all', requireAuth, requireAdminOrCoordinator, getAllSubjects);
+
+// Admin-only routes for modifications
 router.use(requireAuth, requireAdmin);
-router.get('/all', getAllSubjects);
 router.post('/', createSubject);
 router.put('/:id', updateSubject);
 router.delete('/:id', deleteSubject);
