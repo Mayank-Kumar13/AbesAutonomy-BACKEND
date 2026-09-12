@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import Review from '../models/Review.js';
 import OtpToken from '../models/OtpToken.js';
 import LoginLog from '../models/LoginLog.js';
 import ApiResponse from '../utils/ApiResponse.js';
@@ -212,8 +213,15 @@ export const resendOtp = async (req, res, next) => {
 /**
  * GET /api/auth/profile
  */
-export const getProfile = async (req, res) => {
-  return ApiResponse.success(res, req.user.toSafeJSON());
+export const getProfile = async (req, res, next) => {
+  try {
+    const userJson = req.user.toSafeJSON();
+    const review = await Review.findOne({ user: req.user._id });
+    userJson.hasReviewed = !!review;
+    return ApiResponse.success(res, userJson);
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
