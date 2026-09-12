@@ -26,8 +26,7 @@ import {
 } from '../validators/passwordResetValidator.js';
 import { 
   authLimiter, 
-  forgotPasswordIpLimiter, 
-  forgotPasswordEmailLimiter 
+  forgotPasswordLimiter 
 } from '../middleware/rateLimiter.js';
 
 const router = Router();
@@ -37,7 +36,7 @@ router.post('/register', authLimiter, registerValidation, validate, register);
 router.post('/login', authLimiter, loginValidation, validate, login);
 router.post('/verify-otp', authLimiter, otpVerifyValidation, validate, verifyOtp);
 router.post('/resend-otp', authLimiter, otpResendValidation, validate, resendOtp);
-router.post('/forgot-password', forgotPasswordIpLimiter, forgotPasswordEmailLimiter, forgotPasswordValidation, validate, forgotPassword);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPasswordValidation, validate, forgotPassword);
 router.post('/reset-password', authLimiter, resetPasswordValidation, validate, resetPassword);
 
 // ─── Protected routes ─────────────────────────────────

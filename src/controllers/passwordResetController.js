@@ -14,6 +14,13 @@ export const forgotPassword = async (req, res, next) => {
   try {
     console.log('[DIAGNOSTIC] Forgot password controller reached');
     const { email } = req.body;
+    
+    // Admin email should not be processed for password resets
+    if (email.toLowerCase() === 'abesautonomy30@gmail.com') {
+      const remaining = req.rateLimit ? req.rateLimit.remaining : (2 - 1);
+      return ApiResponse.success(res, null, `If that email exists, a reset link has been sent. You have a daily limit of 2 requests, ${remaining} requests left.`);
+    }
+
     const user = await User.findOne({ email });
 
     if (user) {
@@ -32,7 +39,8 @@ export const forgotPassword = async (req, res, next) => {
       );
     }
 
-    return ApiResponse.success(res, null, 'If that email exists, a reset link has been sent');
+    const remaining = req.rateLimit ? req.rateLimit.remaining : (2 - 1); // fallback if rate limit info isn't attached
+    return ApiResponse.success(res, null, `If that email exists, a reset link has been sent. You have a daily limit of 2 requests, ${remaining} requests left.`);
   } catch (error) {
     next(error);
   }

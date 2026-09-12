@@ -80,11 +80,12 @@ export const uploadLimiter = rateLimit({
 });
 
 /**
- * 1-Hour strict rate limiter specifically for Forgot Password (by IP).
+ * 24-Hour strict rate limiter specifically for Forgot Password (by IP).
+ * Limits to 2 requests per day per device/IP.
  */
-export const forgotPasswordIpLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 1, // Only 1 request per hour per IP
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 2, // 2 requests per day per IP
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -110,28 +111,7 @@ export const forgotPasswordIpLimiter = rateLimit({
     
     res.status(429).json({
       success: false,
-      message: 'nice try bitch. Please try again after 1 hour.'
-    });
-  },
-  validate: { xForwardedForHeader: false, default: true }
-});
-
-/**
- * 1-Hour strict rate limiter specifically for Forgot Password (by Email).
- * This prevents attackers from rotating IPs to spam the same email address.
- */
-export const forgotPasswordEmailLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 1, // Only 1 request per hour per Email
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.body.email ? req.body.email.toLowerCase() : 'unknown-email';
-  },
-  handler: (req, res, next, options) => {
-    res.status(429).json({
-      success: false,
-      message: 'nice try bitch. Password reset already requested for this email. Please try again after 1 hour.'
+      message: 'You have reached your daily limit of 2 requests for password reset. Please try again tomorrow.'
     });
   },
   validate: { xForwardedForHeader: false, default: true }
