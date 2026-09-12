@@ -27,8 +27,26 @@ const adminActivitySchema = new mongoose.Schema(
         'UPDATE_NOTE',
         'DELETE_NOTE',
         'CHANGE_STATUS',
+        'COORDINATOR_ASSIGNED',
+        'COORDINATOR_BRANCH_UPDATED',
         'OTHER',
       ],
+    },
+    role: {
+      type: String,
+      default: 'admin',
+    },
+    branch: {
+      type: String,
+      default: null,
+    },
+    subject: {
+      type: String,
+      default: null,
+    },
+    fileName: {
+      type: String,
+      default: null,
     },
     details: {
       type: String,

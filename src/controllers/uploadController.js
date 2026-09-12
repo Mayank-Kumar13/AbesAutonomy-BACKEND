@@ -2,6 +2,7 @@ import multer from 'multer';
 import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { uploadPdf, deleteFile } from '../services/imagekitService.js';
+import { logAdminActivity } from '../utils/logger.js';
 
 // ─── Multer configuration ────────────────────────────
 const storage = multer.memoryStorage();
@@ -48,6 +49,15 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
+    const requestedBranch = (req.body.branch || 'common').toLowerCase();
+
+    if (req.user && req.user.role === 'coordinator') {
+      const assigned = req.user.assignedBranches || [];
+      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
+      }
+    }
+
     // Upload to ImageKit
     let ikResult;
     try {
@@ -77,6 +87,13 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
     };
 
     const note = await Note.create(noteData);
+
+    await logAdminActivity(req, 'UPLOAD_NOTE', `Uploaded note: ${note.title}`, {
+      role: req.user.role,
+      branch: note.branch,
+      subject: note.subject,
+      fileName: note.title
+    });
 
     return ApiResponse.created(res, note, 'PDF uploaded and note created successfully');
   } catch (error) {
@@ -116,6 +133,15 @@ export const registerExistingPdf = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
+    const requestedBranch = (branch || 'common').toLowerCase();
+
+    if (req.user && req.user.role === 'coordinator') {
+      const assigned = req.user.assignedBranches || [];
+      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
+      }
+    }
+
     const noteData = {
       title: title.trim(),
       description: description || '',
@@ -134,6 +160,14 @@ export const registerExistingPdf = async (req, res, next) => {
     };
 
     const note = await Note.create(noteData);
+
+    await logAdminActivity(req, 'UPLOAD_NOTE', `Registered existing note: ${note.title}`, {
+      role: req.user.role,
+      branch: note.branch,
+      subject: note.subject,
+      fileName: note.title
+    });
+
     return ApiResponse.created(res, note, 'Existing PDF registered successfully');
   } catch (error) {
     next(error);

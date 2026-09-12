@@ -6,7 +6,7 @@ import AdminActivity from '../models/AdminActivity.js';
  * @param {String} action - The action enum (e.g., 'DELETE_USER')
  * @param {String} details - Description of what was done
  */
-export const logAdminActivity = async (req, action, details) => {
+export const logAdminActivity = async (req, action, details, options = {}) => {
   try {
     if (!req.user) {
       console.warn('logAdminActivity: req.user is undefined. Cannot log activity.');
@@ -19,6 +19,10 @@ export const logAdminActivity = async (req, action, details) => {
       adminEmail: req.user.email,
       action,
       details,
+      role: options.role || req.user.role || 'admin',
+      branch: options.branch || null,
+      subject: options.subject || null,
+      fileName: options.fileName || null,
     });
 
     await activity.save();

@@ -75,6 +75,15 @@ export const streamNotePdf = async (req, res, next) => {
  */
 export const createNote = async (req, res, next) => {
   try {
+    const requestedBranch = (req.body.branch || 'common').toLowerCase();
+
+    if (req.user && req.user.role === 'coordinator') {
+      const assigned = req.user.assignedBranches || [];
+      if (!assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${requestedBranch}`);
+      }
+    }
+
     const noteData = {
       title: req.body.title,
       description: req.body.description || '',
@@ -95,7 +104,12 @@ export const createNote = async (req, res, next) => {
     };
 
     const note = await Note.create(noteData);
-    await logAdminActivity(req, 'UPLOAD_NOTE', `Uploaded note: ${note.title}`);
+    await logAdminActivity(req, 'UPLOAD_NOTE', `Uploaded note: ${note.title}`, {
+      role: req.user.role,
+      branch: note.branch,
+      subject: note.subject,
+      fileName: note.title
+    });
     return ApiResponse.created(res, note, 'Note created successfully');
   } catch (error) {
     next(error);
@@ -108,6 +122,23 @@ export const createNote = async (req, res, next) => {
  */
 export const updateNote = async (req, res, next) => {
   try {
+    const existingNote = await Note.findById(req.params.id);
+    if (!existingNote) {
+      return ApiResponse.notFound(res, 'Note not found');
+    }
+
+    if (req.user && req.user.role === 'coordinator') {
+      const assigned = req.user.assignedBranches || [];
+      // If branch is being updated, verify they have access to the new branch
+      const requestedBranch = req.body.branch ? req.body.branch.toLowerCase() : existingNote.branch;
+      if (!assigned.map(b => b.toLowerCase()).includes(existingNote.branch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to the existing branch: ${existingNote.branch}`);
+      }
+      if (req.body.branch && !assigned.map(b => b.toLowerCase()).includes(requestedBranch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to the new branch: ${requestedBranch}`);
+      }
+    }
+
     // Only allow specific fields to be updated
     const allowedFields = [
       'title', 'description', 'subject', 'branch', 'year',
@@ -141,7 +172,12 @@ export const updateNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
-    await logAdminActivity(req, 'UPDATE_NOTE', `Updated note: ${note.title}`);
+    await logAdminActivity(req, 'UPDATE_NOTE', `Updated note: ${note.title}`, {
+      role: req.user.role,
+      branch: note.branch,
+      subject: note.subject,
+      fileName: note.title
+    });
     return ApiResponse.success(res, note, 'Note updated successfully');
   } catch (error) {
     next(error);
@@ -160,6 +196,13 @@ export const deleteNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
+    if (req.user && req.user.role === 'coordinator') {
+      const assigned = req.user.assignedBranches || [];
+      if (!assigned.map(b => b.toLowerCase()).includes(note.branch)) {
+        return ApiResponse.forbidden(res, `Coordinator is not assigned to branch: ${note.branch}`);
+      }
+    }
+
     // Attempt to delete from ImageKit if file ID exists
     if (note.imagekitFileId && req.query.deleteFile !== 'false') {
       try {
@@ -171,7 +214,12 @@ export const deleteNote = async (req, res, next) => {
     }
 
     await Note.findByIdAndDelete(req.params.id);
-    await logAdminActivity(req, 'DELETE_NOTE', `Deleted note: ${note.title}`);
+    await logAdminActivity(req, 'DELETE_NOTE', `Deleted note: ${note.title}`, {
+      role: req.user.role,
+      branch: note.branch,
+      subject: note.subject,
+      fileName: note.title
+    });
     return ApiResponse.success(res, null, 'Note deleted successfully');
   } catch (error) {
     next(error);

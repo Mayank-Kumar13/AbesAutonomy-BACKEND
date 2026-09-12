@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-const ROLES = ['user', 'admin'];
+const ROLES = ['user', 'admin', 'coordinator'];
 const PROVIDERS = ['email', 'google', 'github'];
 const SALT_ROUNDS = 12;
 
@@ -80,6 +80,10 @@ const userSchema = new mongoose.Schema(
     loginCount: {
       type: Number,
       default: 0,
+    },
+    assignedBranches: {
+      type: [String],
+      default: [],
     },
   },
   {

@@ -88,6 +88,17 @@ export const requireAdmin = (req, res, next) => {
 };
 
 /**
+ * Require admin or coordinator role.
+ * Must be used AFTER requireAuth.
+ */
+export const requireAdminOrCoordinator = (req, res, next) => {
+  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'coordinator')) {
+    return ApiResponse.forbidden(res, 'Admin or Coordinator access required.');
+  }
+  next();
+};
+
+/**
  * Generate JWT token for a user.
  */
 export const generateToken = (user) => {

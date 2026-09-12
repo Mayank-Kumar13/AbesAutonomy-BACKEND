@@ -44,7 +44,7 @@ export const getStats = async (req, res, next) => {
 export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find()
-      .select('name email role provider emailVerified lastLogin lastActiveAt loginCount totalWatchTimeMs createdAt')
+      .select('name email role assignedBranches provider emailVerified lastLogin lastActiveAt loginCount totalWatchTimeMs createdAt')
       .sort({ createdAt: -1 });
 
     const now = Date.now();
@@ -146,19 +146,38 @@ export const deleteUser = async (req, res, next) => {
 export const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
+    const { role, assignedBranches } = req.body;
 
-    if (!['user', 'admin'].includes(role)) {
+    if (!['user', 'admin', 'coordinator'].includes(role)) {
       return ApiResponse.badRequest(res, 'Invalid role specified');
     }
 
-    const user = await User.findByIdAndUpdate(id, { role }, { new: true, runValidators: true });
+    const updateData = { role };
+    if (role === 'coordinator' && Array.isArray(assignedBranches)) {
+      updateData.assignedBranches = assignedBranches;
+    } else if (role !== 'coordinator') {
+      updateData.assignedBranches = [];
+    }
 
+    const user = await User.findById(id);
     if (!user) {
       return ApiResponse.notFound(res, 'User not found');
     }
-    
-    await logAdminActivity(req, 'UPDATE_ROLE', `Updated role of ${user.email} to ${role}`);
+
+    const previousRole = user.role;
+    const previousBranches = user.assignedBranches || [];
+
+    user.role = updateData.role;
+    user.assignedBranches = updateData.assignedBranches;
+    await user.save();
+
+    if (role === 'coordinator' && previousRole !== 'coordinator') {
+      await logAdminActivity(req, 'COORDINATOR_ASSIGNED', `Assigned coordinator to ${user.email} with branches: ${updateData.assignedBranches.join(', ')}`, { role: user.role });
+    } else if (role === 'coordinator' && previousRole === 'coordinator') {
+      await logAdminActivity(req, 'COORDINATOR_BRANCH_UPDATED', `Updated branches for coordinator ${user.email} from [${previousBranches.join(', ')}] to [${updateData.assignedBranches.join(', ')}]`, { role: user.role });
+    } else {
+      await logAdminActivity(req, 'UPDATE_ROLE', `Updated role of ${user.email} to ${role}`, { role: user.role });
+    }
 
     return ApiResponse.success(res, user.toSafeJSON(), 'User role updated successfully');
   } catch (error) {

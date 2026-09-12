@@ -5,13 +5,13 @@ import {
   registerExistingPdf,
   deleteImageKitFile,
 } from '../controllers/uploadController.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdminOrCoordinator } from '../middleware/auth.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
-// All upload routes require admin auth
-router.use(requireAuth, requireAdmin);
+// All upload routes require admin or coordinator auth
+router.use(requireAuth, requireAdminOrCoordinator);
 
 // Upload PDF file to ImageKit and create note
 router.post('/pdf', uploadLimiter, upload.single('file'), uploadPdfAndCreateNote);

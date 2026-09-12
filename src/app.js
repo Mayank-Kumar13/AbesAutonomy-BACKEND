@@ -34,6 +34,7 @@ app.use(
 const allowedOrigins = [
   'https://abes.work',
   'https://www.abes.work',
+  'http://localhost:5173',
 ];
 
 app.use(
