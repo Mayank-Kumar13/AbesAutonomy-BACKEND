@@ -152,6 +152,7 @@ app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reader', trackingRoutes);
+app.use('/api/tracking', trackingRoutes); // Fallback for cached clients
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subjects', subjectRoutes);

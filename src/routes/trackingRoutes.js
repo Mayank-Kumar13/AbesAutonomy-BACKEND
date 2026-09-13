@@ -8,6 +8,11 @@ router.post('/status', requireAuth, pingLocation);
 router.get('/active', requireAuth, requireAdmin, getLiveUsers);
 router.get('/history', requireAuth, requireAdmin, getPdfLogs);
 
+// Fallbacks for cached clients
+router.post('/ping', requireAuth, pingLocation);
+router.get('/live', requireAuth, requireAdmin, getLiveUsers);
+router.get('/logs', requireAuth, requireAdmin, getPdfLogs);
+
 // Unprotected test route
 router.post('/test-status', testPingLocation);
 
