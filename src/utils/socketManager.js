@@ -4,8 +4,8 @@ import env from '../config/env.js';
 import User from '../models/User.js';
 
 let io;
-// Store active staff members: socketId -> { userId, name, role, location, pdfId, pdfTitle, updatedAt }
-const activeStaff = new Map();
+// Store active users: socketId -> { userId, name, role, location, pdfId, pdfTitle, updatedAt }
+const activeUsers = new Map();
 
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
@@ -17,15 +17,15 @@ export const initSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
-    socket.on('register_staff', async (data) => {
+    socket.on('register_user', async (data) => {
       try {
         if (!data.token) return;
         
         const decoded = jwt.verify(data.token, env.JWT_SECRET);
         const user = await User.findById(decoded.id);
 
-        if (user && (user.role === 'admin' || user.role === 'coordinator')) {
-          activeStaff.set(socket.id, {
+        if (user) {
+          activeUsers.set(socket.id, {
             userId: user._id.toString(),
             name: user.name,
             role: user.role,
@@ -34,7 +34,7 @@ export const initSocket = (httpServer) => {
             pdfTitle: data.pdfTitle || null,
             updatedAt: new Date().toISOString(),
           });
-          broadcastActiveStaff();
+          broadcastActiveUsers();
         }
       } catch (err) {
         // Silent catch for invalid tokens
@@ -42,32 +42,33 @@ export const initSocket = (httpServer) => {
     });
 
     socket.on('update_location', (data) => {
-      const staff = activeStaff.get(socket.id);
-      if (staff) {
-        staff.location = data.location;
-        staff.pdfId = data.pdfId || null;
-        staff.pdfTitle = data.pdfTitle || null;
-        staff.updatedAt = new Date().toISOString();
-        activeStaff.set(socket.id, staff);
-        broadcastActiveStaff();
+      const user = activeUsers.get(socket.id);
+      if (user) {
+        user.location = data.location;
+        user.pdfId = data.pdfId || null;
+        user.pdfTitle = data.pdfTitle || null;
+        user.updatedAt = new Date().toISOString();
+        activeUsers.set(socket.id, user);
+        broadcastActiveUsers();
       }
     });
 
     socket.on('disconnect', () => {
-      if (activeStaff.has(socket.id)) {
-        activeStaff.delete(socket.id);
-        broadcastActiveStaff();
+      if (activeUsers.has(socket.id)) {
+        activeUsers.delete(socket.id);
+        broadcastActiveUsers();
       }
     });
   });
 };
 
-const broadcastActiveStaff = () => {
+const broadcastActiveUsers = () => {
   if (!io) return;
-  const staffList = Array.from(activeStaff.values());
-  io.emit('active_staff_update', staffList);
+  const userList = Array.from(activeUsers.values());
+  io.emit('active_user_update', userList);
 };
 
 export const getActiveStaff = () => {
-  return Array.from(activeStaff.values());
+  // Unused typically, but you can change it to getActiveUsers if needed
+  return Array.from(activeUsers.values());
 };
