@@ -4,8 +4,8 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/ping', requireAuth, pingLocation);
-router.get('/live', requireAuth, requireAdmin, getLiveUsers);
-router.get('/logs', requireAuth, requireAdmin, getPdfLogs);
+router.post('/status', requireAuth, pingLocation);
+router.get('/active', requireAuth, requireAdmin, getLiveUsers);
+router.get('/history', requireAuth, requireAdmin, getPdfLogs);
 
 export default router;
