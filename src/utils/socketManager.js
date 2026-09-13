@@ -8,9 +8,21 @@ let io;
 const activeUsers = new Map();
 
 export const initSocket = (httpServer) => {
+  const allowedOrigins = [
+    'https://abes.work',
+    'https://www.abes.work',
+    'http://localhost:5173',
+    'https://abes-autonomy-front.vercel.app',
+    'https://abesautonomy-front.vercel.app'
+  ];
+
+  if (env.FRONTEND_URL && !allowedOrigins.includes(env.FRONTEND_URL)) {
+    allowedOrigins.push(env.FRONTEND_URL);
+  }
+
   io = new Server(httpServer, {
     cors: {
-      origin: env.FRONTEND_URL,
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },
