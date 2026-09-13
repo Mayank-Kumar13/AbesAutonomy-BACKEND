@@ -13,6 +13,7 @@ import oauthRoutes from './routes/oauthRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import metaRoutes from './routes/metaRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import trackingRoutes from './routes/trackingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 
@@ -144,6 +145,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/tracking', trackingRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subjects', subjectRoutes);
