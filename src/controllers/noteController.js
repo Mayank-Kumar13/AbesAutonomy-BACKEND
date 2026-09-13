@@ -182,11 +182,16 @@ export const deleteNote = async (req, res, next) => {
 
     // Attempt to delete from ImageKit if file ID exists
     if (note.imagekitFileId && req.query.deleteFile !== 'false') {
-      try {
-        await deleteFile(note.imagekitFileId);
-      } catch (ikError) {
-        console.warn(`⚠️  Could not delete ImageKit file ${note.imagekitFileId}:`, ikError.message);
-        // Continue with MongoDB deletion even if ImageKit fails
+      const sharedCount = await Note.countDocuments({ imagekitFileId: note.imagekitFileId });
+      if (sharedCount <= 1) {
+        try {
+          await deleteFile(note.imagekitFileId);
+        } catch (ikError) {
+          console.warn(`⚠️  Could not delete ImageKit file ${note.imagekitFileId}:`, ikError.message);
+          // Continue with MongoDB deletion even if ImageKit fails
+        }
+      } else {
+        console.info(`ℹ️  Skipping ImageKit deletion for ${note.imagekitFileId} as it is shared by ${sharedCount} notes.`);
       }
     }
 
