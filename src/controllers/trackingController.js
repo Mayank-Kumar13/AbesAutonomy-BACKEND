@@ -45,7 +45,8 @@ export const pingLocation = async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Ping Error:", error);
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 };
 
@@ -67,7 +68,7 @@ export const getLiveUsers = async (req, res) => {
     }));
     res.status(200).json({ success: true, data: formattedUsers });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 };
 
@@ -81,6 +82,7 @@ export const getPdfLogs = async (req, res) => {
     
     res.status(200).json({ success: true, data: logs });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Logs Error:", error);
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 };
