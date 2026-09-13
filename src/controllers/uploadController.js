@@ -67,7 +67,7 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       ikResult = await uploadPdf(req.file.buffer, req.file.originalname, folder);
     } catch (ikError) {
       console.error('ImageKit upload error:', ikError);
-      return ApiResponse.error(res, 'ImageKit upload failed. Please verify configuration.', 502);
+      return ApiResponse.error(res, `ImageKit upload failed: ${ikError.message || 'Please verify configuration.'}`, 502);
     }
 
     // Create note in MongoDB
