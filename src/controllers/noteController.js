@@ -75,14 +75,21 @@ export const streamNotePdf = async (req, res, next) => {
  */
 export const createNote = async (req, res, next) => {
   try {
-    const requestedBranch = (req.body.branch || 'common').toLowerCase();
-
+    let parsedBranch = req.body.branch;
+    if (typeof parsedBranch === 'string') {
+      try {
+        const parsed = JSON.parse(parsedBranch);
+        if (Array.isArray(parsed)) parsedBranch = parsed;
+      } catch (e) {}
+    }
 
     const noteData = {
       title: req.body.title,
       description: req.body.description || '',
       subject: req.body.subject.toUpperCase(),
-      branch: req.body.branch.toLowerCase(),
+      branch: Array.isArray(parsedBranch) 
+        ? parsedBranch.map(b => b.toLowerCase())
+        : [(parsedBranch || 'common').toLowerCase()],
       year: parseInt(req.body.year, 10),
       resourceType: req.body.resourceType.toLowerCase(),
       pdfUrl: req.body.pdfUrl,
@@ -139,7 +146,18 @@ export const updateNote = async (req, res, next) => {
 
     // Normalize fields
     if (updates.subject) updates.subject = updates.subject.toUpperCase();
-    if (updates.branch) updates.branch = updates.branch.toLowerCase();
+    if (updates.branch) {
+      let parsedBranch = updates.branch;
+      if (typeof parsedBranch === 'string') {
+        try {
+          const parsed = JSON.parse(parsedBranch);
+          if (Array.isArray(parsed)) parsedBranch = parsed;
+        } catch (e) {}
+      }
+      updates.branch = Array.isArray(parsedBranch) 
+        ? parsedBranch.map(b => b.toLowerCase())
+        : [parsedBranch.toLowerCase()];
+    }
     if (updates.resourceType) updates.resourceType = updates.resourceType.toLowerCase();
     if (updates.year) updates.year = parseInt(updates.year, 10);
     if (updates.semester) updates.semester = parseInt(updates.semester, 10);

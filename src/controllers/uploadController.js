@@ -41,7 +41,17 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Subject is required.');
     }
 
-    if (!req.body.branch || req.body.branch.trim() === '') {
+    let parsedBranch = req.body.branch;
+    if (typeof parsedBranch === 'string') {
+      try {
+        const parsed = JSON.parse(parsedBranch);
+        if (Array.isArray(parsed)) parsedBranch = parsed;
+      } catch (e) {
+        // Not a JSON string, leave as string
+      }
+    }
+
+    if (!parsedBranch || (typeof parsedBranch === 'string' && parsedBranch.trim() === '') || (Array.isArray(parsedBranch) && parsedBranch.length === 0)) {
       return ApiResponse.badRequest(res, 'Branch is required.');
     }
 
@@ -49,13 +59,11 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
-    const requestedBranch = (req.body.branch || 'common').toLowerCase();
-
-
     // Upload to ImageKit
     let ikResult;
     try {
-      const folder = `/notes/${req.body.branch || 'general'}/${req.body.subject.trim()}`;
+      const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
+      const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim()}`;
       ikResult = await uploadPdf(req.file.buffer, req.file.originalname, folder);
     } catch (ikError) {
       console.error('ImageKit upload error:', ikError);
@@ -67,7 +75,9 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       title: req.body.title.trim(),
       description: req.body.description || '',
       subject: req.body.subject.trim().toUpperCase(),
-      branch: (req.body.branch || 'common').toLowerCase(),
+      branch: Array.isArray(parsedBranch) 
+        ? parsedBranch.map(b => b.toLowerCase()) 
+        : [(parsedBranch || 'common').toLowerCase()],
       year: parseInt(req.body.year, 10) || 1,
       resourceType: (req.body.resourceType || 'theory').toLowerCase(),
       semester: req.body.semester ? parseInt(req.body.semester, 10) : undefined,
@@ -119,7 +129,17 @@ export const registerExistingPdf = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Subject is required.');
     }
 
-    if (!branch || branch.trim() === '') {
+    let parsedBranch = branch;
+    if (typeof parsedBranch === 'string') {
+      try {
+        const parsed = JSON.parse(parsedBranch);
+        if (Array.isArray(parsed)) parsedBranch = parsed;
+      } catch (e) {
+        // Not a JSON string
+      }
+    }
+
+    if (!parsedBranch || (typeof parsedBranch === 'string' && parsedBranch.trim() === '') || (Array.isArray(parsedBranch) && parsedBranch.length === 0)) {
       return ApiResponse.badRequest(res, 'Branch is required.');
     }
 
@@ -127,14 +147,13 @@ export const registerExistingPdf = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
-    const requestedBranch = (branch || 'common').toLowerCase();
-
-
     const noteData = {
       title: title.trim(),
       description: description || '',
       subject: subject.trim().toUpperCase(),
-      branch: (branch || 'common').toLowerCase(),
+      branch: Array.isArray(parsedBranch)
+        ? parsedBranch.map(b => b.toLowerCase())
+        : [(parsedBranch || 'common').toLowerCase()],
       year: parseInt(year, 10) || 1,
       resourceType: (resourceType || 'theory').toLowerCase(),
       semester: semester ? parseInt(semester, 10) : undefined,
