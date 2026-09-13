@@ -6,40 +6,47 @@ export const pingLocation = async (req, res) => {
     const user = req.user;
     const { location, pdfId, pdfTitle } = req.body;
     
-    // Update User model
-    await User.findByIdAndUpdate(user._id, {
-      currentLocation: location || '/',
-      currentPdfId: pdfId || null,
-      currentPdfTitle: pdfTitle || null,
-      lastActiveAt: new Date()
-    });
+    // Update User model safely
+    try {
+      await User.findByIdAndUpdate(user._id, {
+        currentLocation: location || '/',
+        currentPdfId: pdfId || null,
+        currentPdfTitle: pdfTitle || null,
+        lastActiveAt: new Date()
+      });
+    } catch (err) {
+      console.error("User update error in ping:", err);
+    }
 
     // If viewing a PDF, update or create PdfViewLog
     if (pdfTitle) {
-      // Check if there is a recent log for this user and this PDF (within last 2 minutes)
-      const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-      
-      const recentLog = await PdfViewLog.findOne({
-        user: user._id,
-        pdfTitle: pdfTitle,
-        endTime: { $gte: twoMinsAgo }
-      });
-
-      if (recentLog) {
-        recentLog.endTime = new Date();
-        recentLog.durationMs = recentLog.endTime.getTime() - recentLog.startTime.getTime();
-        await recentLog.save();
-      } else {
-        await PdfViewLog.create({
+      try {
+        const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+        
+        const recentLog = await PdfViewLog.findOne({
           user: user._id,
-          userName: user.name,
-          userEmail: user.email,
-          pdfId: pdfId || null,
           pdfTitle: pdfTitle,
-          startTime: new Date(),
-          endTime: new Date(),
-          durationMs: 0
+          endTime: { $gte: twoMinsAgo }
         });
+
+        if (recentLog) {
+          recentLog.endTime = new Date();
+          recentLog.durationMs = recentLog.endTime.getTime() - recentLog.startTime.getTime();
+          await recentLog.save();
+        } else {
+          await PdfViewLog.create({
+            user: user._id,
+            userName: user.name || "Unknown User",
+            userEmail: user.email || "Unknown Email",
+            pdfId: pdfId || null,
+            pdfTitle: pdfTitle,
+            startTime: new Date(),
+            endTime: new Date(),
+            durationMs: 0
+          });
+        }
+      } catch (err) {
+        console.error("PdfViewLog error in ping:", err);
       }
     }
 

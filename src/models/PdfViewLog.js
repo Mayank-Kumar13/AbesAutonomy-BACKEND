@@ -9,11 +9,11 @@ const pdfViewLogSchema = new mongoose.Schema(
     },
     userName: {
       type: String,
-      required: true,
+      default: "Unknown User"
     },
     userEmail: {
       type: String,
-      required: true,
+      default: "Unknown Email"
     },
     pdfId: {
       type: String,
@@ -21,7 +21,7 @@ const pdfViewLogSchema = new mongoose.Schema(
     },
     pdfTitle: {
       type: String,
-      required: true,
+      default: "Untitled PDF"
     },
     startTime: {
       type: Date,
