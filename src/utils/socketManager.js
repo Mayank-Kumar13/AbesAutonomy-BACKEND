@@ -29,6 +29,9 @@ export const initSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
+    // Immediately send the current state to any newly connected client
+    socket.emit('active_user_update', Array.from(activeUsers.values()));
+
     socket.on('register_user', async (data) => {
       try {
         if (!data.token) return;
