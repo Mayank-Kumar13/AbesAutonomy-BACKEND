@@ -13,6 +13,8 @@ export const logAdminActivity = async (req, action, details, options = {}) => {
       return;
     }
 
+    const branchStr = Array.isArray(options.branch) ? options.branch.join(', ') : options.branch;
+
     const activity = new AdminActivity({
       adminId: req.user._id,
       adminName: req.user.name,
@@ -20,7 +22,7 @@ export const logAdminActivity = async (req, action, details, options = {}) => {
       action,
       details,
       role: options.role || req.user.role || 'admin',
-      branch: options.branch || null,
+      branch: branchStr || null,
       subject: options.subject || null,
       fileName: options.fileName || null,
     });
