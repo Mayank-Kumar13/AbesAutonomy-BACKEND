@@ -1,13 +1,21 @@
+import { createServer } from 'http';
 import app from './app.js';
 import env from './config/env.js';
 import connectDB from './config/db.js';
+import { initSocket } from './utils/socketManager.js';
 
 const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
 
+  // Create HTTP server
+  const httpServer = createServer(app);
+
+  // Initialize Socket.IO
+  initSocket(httpServer);
+
   // Start HTTP server
-  const server = app.listen(env.PORT,'0.0.0.0', () => {
+  const server = httpServer.listen(env.PORT, '0.0.0.0', () => {
     console.log(`\n🚀 ABES Autonomy API Server`);
     console.log(`   Environment: ${env.NODE_ENV}`);
     console.log(`   Port:        ${env.PORT}`);

@@ -9,7 +9,7 @@ import {
   incrementViewCount,
   streamNotePdf,
 } from '../controllers/noteController.js';
-import { requireAuth, requireAdminOrCoordinator } from '../middleware/auth.js';
+import { requireAuth, requireAdminOrCoordinator, requireAdmin } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
 import {
   createNoteValidation,
@@ -32,6 +32,6 @@ router.post('/:id/view', noteIdValidation, validate, incrementViewCount);
 // ─── Admin routes ─────────────────────────────────────
 router.post('/', requireAuth, requireAdminOrCoordinator, createNoteValidation, validate, createNote);
 router.patch('/:id', requireAuth, requireAdminOrCoordinator, updateNoteValidation, validate, updateNote);
-router.delete('/:id', requireAuth, requireAdminOrCoordinator, noteIdValidation, validate, deleteNote);
+router.delete('/:id', requireAuth, requireAdmin, noteIdValidation, validate, deleteNote);
 
 export default router;
