@@ -93,3 +93,27 @@ export const getPdfLogs = async (req, res) => {
     res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 };
+
+export const testPingLocation = async (req, res) => {
+  try {
+    const { location, pdfId, pdfTitle } = req.body;
+    
+    if (pdfTitle) {
+      await PdfViewLog.create({
+        user: new mongoose.Types.ObjectId(), // Fake ID
+        userName: "Debug User",
+        userEmail: "debug@example.com",
+        pdfId: pdfId || null,
+        pdfTitle: pdfTitle,
+        startTime: new Date(),
+        endTime: new Date(),
+        durationMs: 0
+      });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Test Ping Error:", error);
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
+  }
+};

@@ -5,23 +5,18 @@ dotenv.config();
 import PdfViewLog from './src/models/PdfViewLog.js';
 
 async function checkDB() {
-  await mongoose.connect(process.env.MONGODB_URI);
+  await mongoose.connect(process.env.MONGODB_URI, { dbName: 'abes_autonomy' });
   console.log("Connected to MongoDB.");
   
   try {
-    const newLog = await PdfViewLog.create({
-      user: new mongoose.Types.ObjectId(),
-      userName: "Test User",
-      userEmail: "test@example.com",
-      pdfId: "http://example.com/pdf",
-      pdfTitle: "Computer Networks",
-      startTime: new Date(),
-      endTime: new Date(),
-      durationMs: 0
-    });
-    console.log("Created successfully:", newLog);
+    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const logs = await PdfViewLog.find({ updatedAt: { $gte: thirtyMinsAgo } });
+    console.log("Logs in last 30 mins:", logs.length);
+    if (logs.length > 0) {
+      console.log("Latest Log:", logs[logs.length - 1]);
+    }
   } catch (error) {
-    console.error("Error creating log:", error);
+    console.error("Error querying logs:", error);
   }
   
   process.exit(0);

@@ -36,6 +36,7 @@ const allowedOrigins = [
   'https://abes.work',
   'https://www.abes.work',
   'http://localhost:5173',
+  'https://warm-blancmange-c9edb0.netlify.app'
 ];
 
 app.use(
