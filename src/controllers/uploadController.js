@@ -63,7 +63,7 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
     let ikResult;
     try {
       const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
-      const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim()}`;
+      const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}`;
       ikResult = await uploadPdf(req.file.buffer, req.file.originalname, folder);
     } catch (ikError) {
       console.error('ImageKit upload error:', ikError);
