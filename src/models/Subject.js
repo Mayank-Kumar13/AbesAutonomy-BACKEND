@@ -20,10 +20,12 @@ const subjectSchema = new mongoose.Schema(
       enum: [1, 2, 3, 4],
     },
     group: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: 'common',
+      type: [{
+        type: String,
+        trim: true,
+        lowercase: true,
+      }],
+      default: ['common'],
     },
     icon: {
       type: String,
