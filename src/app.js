@@ -42,13 +42,18 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin
-      // (Postman, server-to-server, mobile apps, etc.)
+      // Allow requests with no origin (Postman, mobile apps, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
+      // Allow exactly known domains
       if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Dynamically allow any Vercel preview/production domains
+      if (origin.endsWith('vercel.app')) {
         return callback(null, true);
       }
 
