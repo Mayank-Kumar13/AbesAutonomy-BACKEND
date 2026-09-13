@@ -24,13 +24,15 @@ const noteSchema = new mongoose.Schema(
       uppercase: true,
     },
     branch: {
-      type: String,
+      type: [{
+        type: String,
+        enum: {
+          values: BRANCHES,
+          message: 'Branch must be one of: ' + BRANCHES.join(', '),
+        },
+        lowercase: true,
+      }],
       required: [true, 'Branch is required'],
-      enum: {
-        values: BRANCHES,
-        message: 'Branch must be one of: ' + BRANCHES.join(', '),
-      },
-      lowercase: true,
     },
     year: {
       type: Number,
