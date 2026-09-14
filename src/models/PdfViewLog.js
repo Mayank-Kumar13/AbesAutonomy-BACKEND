@@ -23,6 +23,10 @@ const pdfViewLogSchema = new mongoose.Schema(
       type: String,
       default: "Untitled PDF"
     },
+    subject: {
+      type: String,
+      default: "Unknown Subject"
+    },
     startTime: {
       type: Date,
       default: Date.now,

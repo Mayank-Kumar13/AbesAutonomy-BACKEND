@@ -4,7 +4,7 @@ import PdfViewLog from '../models/PdfViewLog.js';
 export const pingLocation = async (req, res) => {
   try {
     const user = req.user;
-    const { location, pdfId, pdfTitle } = req.body;
+    const { location, pdfId, pdfTitle, subject } = req.body;
     
     // Update User model safely
     try {
@@ -40,6 +40,7 @@ export const pingLocation = async (req, res) => {
             userEmail: user.email || "Unknown Email",
             pdfId: pdfId || null,
             pdfTitle: pdfTitle,
+            subject: subject || "Unknown Subject",
             startTime: new Date(),
             endTime: new Date(),
             durationMs: 0
