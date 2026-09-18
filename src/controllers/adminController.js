@@ -5,6 +5,7 @@ import AdminActivity from '../models/AdminActivity.js';
 import SuspiciousIP from '../models/SuspiciousIP.js';
 import EmailLog from '../models/EmailLog.js';
 import EmailQuota from '../models/EmailQuota.js';
+import Visitor from '../models/Visitor.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -20,6 +21,7 @@ export const getStats = async (req, res, next) => {
       lastActiveAt: { $gte: new Date(Date.now() - LIVE_WINDOW_MS) },
     });
     const verifiedUsers = await User.countDocuments({ emailVerified: true });
+    const totalVisitors = await Visitor.countDocuments();
 
     const watchAgg = await User.aggregate([
       { $match: { role: { $ne: 'admin' } } },
@@ -32,6 +34,7 @@ export const getStats = async (req, res, next) => {
       liveUsers,
       verifiedUsers,
       totalWatchTimeMs,
+      totalVisitors,
     });
   } catch (error) {
     next(error);

@@ -1,5 +1,5 @@
 import express from 'express';
-import { pingLocation, getLiveUsers, getPdfLogs, testPingLocation } from '../controllers/trackingController.js';
+import { pingLocation, getLiveUsers, getPdfLogs, testPingLocation, recordVisit } from '../controllers/trackingController.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.get('/logs', requireAuth, requireAdmin, getPdfLogs);
 
 // Unprotected test route
 router.post('/test-status', testPingLocation);
+
+// Public visit tracking route
+router.post('/visit', recordVisit);
 
 export default router;

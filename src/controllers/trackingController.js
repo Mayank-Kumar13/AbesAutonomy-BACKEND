@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import PdfViewLog from '../models/PdfViewLog.js';
+import Visitor from '../models/Visitor.js';
 
 export const pingLocation = async (req, res) => {
   try {
@@ -118,3 +119,21 @@ export const testPingLocation = async (req, res) => {
     res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 };
+
+export const recordVisit = async (req, res) => {
+  try {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    if (ip) {
+      await Visitor.findOneAndUpdate(
+        { ip },
+        { $inc: { visitCount: 1 }, lastVisit: new Date() },
+        { upsert: true, new: true }
+      );
+    }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Record Visit Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
