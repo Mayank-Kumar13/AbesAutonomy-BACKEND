@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import PdfViewLog from '../models/PdfViewLog.js';
 import Visitor from '../models/Visitor.js';
+import SyntheticVisitor from '../models/SyntheticVisitor.js';
 
 export const pingLocation = async (req, res) => {
   try {
@@ -122,8 +123,25 @@ export const testPingLocation = async (req, res) => {
 
 export const recordVisit = async (req, res) => {
   try {
+    const isSynthetic = req.headers['x-synthetic-test'] === 'true';
+    const syntheticSecret = req.headers['x-synthetic-secret'];
+    const syntheticId = req.headers['x-synthetic-vu-id'];
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    if (ip) {
+
+    // Optional environment variable for secret, default to 'k6-secret-token' if not set for safety fallback during dev
+    const validSecret = process.env.SYNTHETIC_TEST_SECRET || 'k6-secret-token';
+
+    if (isSynthetic && syntheticId && syntheticSecret === validSecret) {
+      await SyntheticVisitor.findOneAndUpdate(
+        { syntheticId },
+        { 
+          $inc: { visitCount: 1 }, 
+          lastVisit: new Date(),
+          ip: ip // optional store the ip too
+        },
+        { upsert: true, new: true }
+      );
+    } else if (ip) {
       await Visitor.findOneAndUpdate(
         { ip },
         { $inc: { visitCount: 1 }, lastVisit: new Date() },
