@@ -128,20 +128,28 @@ export const recordVisit = async (req, res) => {
     const syntheticId = req.headers['x-synthetic-vu-id'];
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    // Optional environment variable for secret, default to 'k6-secret-token' if not set for safety fallback during dev
-    const validSecret = process.env.SYNTHETIC_TEST_SECRET || 'k6-secret-token';
+    if (isSynthetic) {
+      const validSecret = process.env.SYNTHETIC_TEST_SECRET;
+      
+      if (!validSecret || syntheticSecret !== validSecret) {
+        return res.status(401).json({ success: false, error: 'Unauthorized synthetic request' });
+      }
 
-    if (isSynthetic && syntheticId && syntheticSecret === validSecret) {
-      await SyntheticVisitor.findOneAndUpdate(
-        { syntheticId },
-        { 
-          $inc: { visitCount: 1 }, 
-          lastVisit: new Date(),
-          ip: ip // optional store the ip too
-        },
-        { upsert: true, new: true }
-      );
-    } else if (ip) {
+      if (syntheticId) {
+        await SyntheticVisitor.findOneAndUpdate(
+          { syntheticId },
+          { 
+            $inc: { visitCount: 1 }, 
+            lastVisit: new Date(),
+            ip: ip // optional store the ip too
+          },
+          { upsert: true, new: true }
+        );
+      }
+      return res.status(200).json({ success: true });
+    }
+
+    if (ip) {
       await Visitor.findOneAndUpdate(
         { ip },
         { $inc: { visitCount: 1 }, lastVisit: new Date() },
