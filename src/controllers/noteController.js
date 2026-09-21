@@ -5,6 +5,12 @@ import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { logAdminActivity } from '../utils/logger.js';
 import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * GET /api/notes
@@ -74,8 +80,42 @@ export const streamNotePdf = async (req, res, next) => {
       
       const viewerName = req.user ? (req.user.name || req.user.email) : 'Guest User';
       
+      // Try to load logo
+      let logoImage;
+      try {
+        const logoPath = path.resolve(__dirname, '../../logo.png');
+        if (fs.existsSync(logoPath)) {
+          const logoBytes = fs.readFileSync(logoPath);
+          logoImage = await pdfDoc.embedPng(logoBytes);
+        }
+      } catch (e) {
+        console.error('Failed to load logo for stream:', e.message);
+      }
+      
       for (const page of pages) {
         const { width, height } = page.getSize();
+        
+        // Draw the logo in the center
+        if (logoImage) {
+          const logoDims = logoImage.scale(0.5); // Adjust size as needed
+          page.drawImage(logoImage, {
+            x: width / 2 - logoDims.width / 2,
+            y: height / 2 - logoDims.height / 2,
+            width: logoDims.width,
+            height: logoDims.height,
+            opacity: 0.15,
+          });
+        }
+
+        // Draw "ABES AUTONOMY" diagonally in the center
+        page.drawText('ABES AUTONOMY', {
+          x: width / 2 - 250, // adjust position to center the text
+          y: height / 2 - 50,
+          size: 70,
+          color: rgb(0.8, 0.8, 0.8), // Light gray
+          rotate: degrees(45),
+          opacity: 0.25, // Faint text
+        });
         
         // Draw viewer's name vertically on the right side
         page.drawText(viewerName, {
