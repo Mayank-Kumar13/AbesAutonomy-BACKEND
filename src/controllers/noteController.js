@@ -94,11 +94,6 @@ export const streamNotePdf = async (req, res, next) => {
       
       const totalPages = pages.length;
       for (let i = 0; i < totalPages; i++) {
-        // Only add watermark to the first and last page
-        if (i !== 0 && i !== totalPages - 1 && totalPages > 1) {
-          continue;
-        }
-        
         const page = pages[i];
         const { width, height } = page.getSize();
         
