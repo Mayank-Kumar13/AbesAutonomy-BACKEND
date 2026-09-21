@@ -3,6 +3,13 @@ import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { uploadPdf, deleteFile } from '../services/imagekitService.js';
 import { logAdminActivity } from '../utils/logger.js';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─── Multer configuration ────────────────────────────
 const storage = multer.memoryStorage();
@@ -62,9 +69,46 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
     // Upload to ImageKit
     let ikResult;
     try {
+      // Apply Watermark
+      let finalBuffer = req.file.buffer;
+      try {
+        const pdfDoc = await PDFDocument.load(req.file.buffer);
+        const pages = pdfDoc.getPages();
+        
+        let logoImage;
+        try {
+          const logoPath = path.resolve(__dirname, '../../logo.png');
+          if (fs.existsSync(logoPath)) {
+            const logoBytes = fs.readFileSync(logoPath);
+            logoImage = await pdfDoc.embedPng(logoBytes);
+          }
+        } catch (e) {
+          console.error('Failed to load logo:', e.message);
+        }
+
+        for (const page of pages) {
+          const { width, height } = page.getSize();
+          
+          if (logoImage) {
+            const logoDims = logoImage.scale(0.5);
+            page.drawImage(logoImage, {
+              x: width / 2 - logoDims.width / 2,
+              y: height / 2,
+              width: logoDims.width,
+              height: logoDims.height,
+              opacity: 0.15,
+            });
+          }
+        }
+        
+        finalBuffer = Buffer.from(await pdfDoc.save());
+      } catch (watermarkErr) {
+        console.error('Error adding watermark, proceeding with original:', watermarkErr);
+      }
+
       const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
       const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-      ikResult = await uploadPdf(req.file.buffer, req.file.originalname, folder);
+      ikResult = await uploadPdf(finalBuffer, req.file.originalname, folder);
     } catch (ikError) {
       console.error('ImageKit upload error:', ikError);
       return ApiResponse.error(res, `ImageKit upload failed: ${ikError.message || 'Please verify configuration.'}`, 502);

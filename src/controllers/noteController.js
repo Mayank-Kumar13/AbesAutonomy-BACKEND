@@ -4,6 +4,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { logAdminActivity } from '../utils/logger.js';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
 
 /**
  * GET /api/notes
@@ -62,8 +63,43 @@ export const streamNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
 
-    // Redirect directly to the CDN URL to avoid serverless payload size limits (6MB)
-    res.redirect(302, note.pdfUrl);
+    // Attempt dynamic watermarking
+    try {
+      const pdfResponse = await fetch(note.pdfUrl);
+      if (!pdfResponse.ok) throw new Error('Failed to fetch PDF from CDN');
+      
+      const arrayBuffer = await pdfResponse.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+      
+      const viewerName = req.user ? (req.user.name || req.user.email) : 'Guest User';
+      
+      for (const page of pages) {
+        const { width, height } = page.getSize();
+        
+        // Draw viewer's name vertically on the right side
+        page.drawText(viewerName, {
+          x: width - 70, // 70 units from right edge
+          y: height / 2 - 150, // Roughly centered vertically
+          size: 50,
+          color: rgb(0.7, 0.7, 0.7), // Light gray
+          rotate: degrees(90),
+          opacity: 0.3, // Faint text
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${note.title}.pdf"`);
+      res.setHeader('Content-Length', pdfBytes.length);
+      return res.send(Buffer.from(pdfBytes));
+
+    } catch (watermarkErr) {
+      console.error('Dynamic watermark error, falling back to redirect:', watermarkErr);
+      // Fallback: Redirect directly to the CDN URL
+      return res.redirect(302, note.pdfUrl);
+    }
   } catch (error) {
     next(error);
   }
