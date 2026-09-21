@@ -92,7 +92,14 @@ export const streamNotePdf = async (req, res, next) => {
         console.error('Failed to load logo for stream:', e.message);
       }
       
-      for (const page of pages) {
+      const totalPages = pages.length;
+      for (let i = 0; i < totalPages; i++) {
+        // Only add watermark to the first and last page
+        if (i !== 0 && i !== totalPages - 1 && totalPages > 1) {
+          continue;
+        }
+        
+        const page = pages[i];
         const { width, height } = page.getSize();
         
         // Draw the logo in the center
@@ -103,7 +110,7 @@ export const streamNotePdf = async (req, res, next) => {
             y: height / 2 - logoDims.height / 2,
             width: logoDims.width,
             height: logoDims.height,
-            opacity: 0.15,
+            opacity: 0.25, // Increased slightly so it's more visible as requested
           });
         }
 
@@ -114,7 +121,7 @@ export const streamNotePdf = async (req, res, next) => {
           size: 70,
           color: rgb(0.8, 0.8, 0.8), // Light gray
           rotate: degrees(45),
-          opacity: 0.25, // Faint text
+          opacity: 0.35, // Increased slightly
         });
         
         // Draw viewer's name vertically on the right side
@@ -124,7 +131,7 @@ export const streamNotePdf = async (req, res, next) => {
           size: 50,
           color: rgb(0.7, 0.7, 0.7), // Light gray
           rotate: degrees(90),
-          opacity: 0.3, // Faint text
+          opacity: 0.4, // Increased slightly
         });
       }
 
