@@ -5,21 +5,18 @@ import {
   registerExistingPdf,
   deleteImageKitFile,
 } from '../controllers/uploadController.js';
-import { requireAuth, requireAdminOrCoordinator } from '../middleware/auth.js';
+import { requireAuth, requireAdminOrCoordinator, requireAdmin } from '../middleware/auth.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
-// All upload routes require admin or coordinator auth
-router.use(requireAuth, requireAdminOrCoordinator);
-
 // Upload PDF file to ImageKit and create note
-router.post('/pdf', uploadLimiter, upload.single('file'), uploadPdfAndCreateNote);
+router.post('/pdf', requireAuth, requireAdminOrCoordinator, uploadLimiter, upload.single('file'), uploadPdfAndCreateNote);
 
 // Register an existing ImageKit PDF in MongoDB
-router.post('/register', registerExistingPdf);
+router.post('/register', requireAuth, requireAdminOrCoordinator, registerExistingPdf);
 
 // Delete a file from ImageKit
-router.delete('/:fileId', deleteImageKitFile);
+router.delete('/:fileId', requireAuth, requireAdmin, deleteImageKitFile);
 
 export default router;

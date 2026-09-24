@@ -13,6 +13,7 @@ import oauthRoutes from './routes/oauthRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import metaRoutes from './routes/metaRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import trackingRoutes from './routes/trackingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 
@@ -35,18 +36,24 @@ const allowedOrigins = [
   'https://abes.work',
   'https://www.abes.work',
   'http://localhost:5173',
+  'https://warm-blancmange-c9edb0.netlify.app'
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin
-      // (Postman, server-to-server, mobile apps, etc.)
+      // Allow requests with no origin (Postman, mobile apps, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
+      // Allow exactly known domains
       if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Dynamically allow any Vercel preview/production domains
+      if (origin.endsWith('vercel.app')) {
         return callback(null, true);
       }
 
@@ -144,6 +151,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reader', trackingRoutes);
+app.use('/api/tracking', trackingRoutes); // Fallback for cached clients
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subjects', subjectRoutes);

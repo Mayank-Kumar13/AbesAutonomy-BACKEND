@@ -61,6 +61,18 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    currentLocation: {
+      type: String,
+      default: '/',
+    },
+    currentPdfId: {
+      type: String,
+      default: null,
+    },
+    currentPdfTitle: {
+      type: String,
+      default: null,
+    },
     totalWatchTimeMs: {
       type: Number,
       default: 0,

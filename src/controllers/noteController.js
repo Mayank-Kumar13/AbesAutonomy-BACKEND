@@ -5,6 +5,13 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { logAdminActivity } from '../utils/logger.js';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * GET /api/notes
@@ -89,39 +96,78 @@ export const downloadNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
 
-    const response = await fetch(note.pdfUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch PDF from storage: ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
-    
-    const pages = pdfDoc.getPages();
-    const watermarkText = `ABES Autonomy\nDownloaded by: ${req.user?.email || req.user?.name || 'Student'}\nDate: ${new Date().toLocaleString()}`;
-    
-    for (const page of pages) {
-      const { width, height } = page.getSize();
+    try {
+      const pdfResponse = await fetch(note.pdfUrl);
+      if (!pdfResponse.ok) throw new Error('Failed to fetch PDF from CDN');
       
-      // Simple math to center a 3-line text block, roughly
-      page.drawText(watermarkText, {
-        x: width / 2 - 150,
-        y: height / 2,
-        size: 24,
-        color: rgb(0.8, 0.8, 0.8),
-        opacity: 0.5,
-        rotate: degrees(45),
-        lineHeight: 30,
-      });
+      const arrayBuffer = await pdfResponse.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+      
+      const viewerName = req.user ? (req.user.name || req.user.email) : 'Guest User';
+      
+      // Try to load logo
+      let logoImage;
+      try {
+        const logoPath = path.resolve(__dirname, '../../logo.png');
+        if (fs.existsSync(logoPath)) {
+          const logoBytes = fs.readFileSync(logoPath);
+          logoImage = await pdfDoc.embedPng(logoBytes);
+        }
+      } catch (e) {
+        console.error('Failed to load logo for stream:', e.message);
+      }
+      
+      const totalPages = pages.length;
+      for (let i = 0; i < totalPages; i++) {
+        const page = pages[i];
+        const { width, height } = page.getSize();
+        
+        // Draw the logo in the center
+        if (logoImage) {
+          const logoDims = logoImage.scale(0.5); // Adjust size as needed
+          page.drawImage(logoImage, {
+            x: width / 2 - logoDims.width / 2,
+            y: height / 2 - logoDims.height / 2,
+            width: logoDims.width,
+            height: logoDims.height,
+            opacity: 0.25, // Increased slightly so it's more visible as requested
+          });
+        }
+
+        // Draw "ABES AUTONOMY" diagonally in the center
+        page.drawText('ABES AUTONOMY', {
+          x: width / 2 - 250, // adjust position to center the text
+          y: height / 2 - 50,
+          size: 70,
+          color: rgb(0.8, 0.8, 0.8), // Light gray
+          rotate: degrees(45),
+          opacity: 0.35, // Increased slightly
+        });
+        
+        // Draw viewer's name vertically on the right side
+        page.drawText(viewerName, {
+          x: width - 70, // 70 units from right edge
+          y: height / 2 - 150, // Roughly centered vertically
+          size: 50,
+          color: rgb(0.7, 0.7, 0.7), // Light gray
+          rotate: degrees(90),
+          opacity: 0.4, // Increased slightly
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(note.title)}.pdf"`);
+      res.setHeader('Content-Length', pdfBytes.length);
+      return res.end(Buffer.from(pdfBytes));
+
+    } catch (watermarkErr) {
+      console.error('Dynamic watermark error, falling back to redirect:', watermarkErr);
+      // Fallback: Redirect directly to the CDN URL
+      return res.redirect(302, note.pdfUrl);
     }
-
-    const pdfBytes = await pdfDoc.save();
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(note.title)}.pdf"`);
-    res.setHeader('Content-Length', pdfBytes.length);
-
-    res.end(Buffer.from(pdfBytes));
   } catch (error) {
     next(error);
   }

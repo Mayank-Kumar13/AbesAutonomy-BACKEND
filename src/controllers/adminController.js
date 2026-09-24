@@ -5,6 +5,8 @@ import AdminActivity from '../models/AdminActivity.js';
 import SuspiciousIP from '../models/SuspiciousIP.js';
 import EmailLog from '../models/EmailLog.js';
 import EmailQuota from '../models/EmailQuota.js';
+import Visitor from '../models/Visitor.js';
+import SyntheticVisitor from '../models/SyntheticVisitor.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -20,6 +22,7 @@ export const getStats = async (req, res, next) => {
       lastActiveAt: { $gte: new Date(Date.now() - LIVE_WINDOW_MS) },
     });
     const verifiedUsers = await User.countDocuments({ emailVerified: true });
+    const totalVisitors = await Visitor.countDocuments();
 
     const watchAgg = await User.aggregate([
       { $match: { role: { $ne: 'admin' } } },
@@ -27,11 +30,23 @@ export const getStats = async (req, res, next) => {
     ]);
     const totalWatchTimeMs = watchAgg[0]?.total || 0;
 
+    // Synthetic Load Test Stats
+    const syntheticVisitors = await SyntheticVisitor.countDocuments();
+    const syntheticReqAgg = await SyntheticVisitor.aggregate([
+      { $group: { _id: null, total: { $sum: '$visitCount' }, lastActive: { $max: '$lastVisit' } } },
+    ]);
+    const syntheticRequests = syntheticReqAgg[0]?.total || 0;
+    const syntheticLastActive = syntheticReqAgg[0]?.lastActive || null;
+
     return ApiResponse.success(res, {
       totalUsers,
       liveUsers,
       verifiedUsers,
       totalWatchTimeMs,
+      totalVisitors,
+      syntheticVisitors,
+      syntheticRequests,
+      syntheticLastActive,
     });
   } catch (error) {
     next(error);
