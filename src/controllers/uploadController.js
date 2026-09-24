@@ -15,10 +15,11 @@ const __dirname = path.dirname(__filename);
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/pdf') {
+  const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF files are allowed.'), false);
+    cb(new Error('Only PDF and image files are allowed.'), false);
   }
 };
 
@@ -37,7 +38,7 @@ export const upload = multer({
 export const uploadPdfAndCreateNote = async (req, res, next) => {
   try {
     if (!req.file) {
-      return ApiResponse.badRequest(res, 'No PDF file provided.');
+      return ApiResponse.badRequest(res, 'No file provided.');
     }
 
     if (!req.body.title || req.body.title.trim() === '') {
@@ -71,7 +72,8 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
     try {
       // Apply Watermark
       let finalBuffer = req.file.buffer;
-      try {
+      if (req.file.mimetype === 'application/pdf') {
+        try {
         const pdfDoc = await PDFDocument.load(req.file.buffer);
         const pages = pdfDoc.getPages();
         
@@ -101,9 +103,10 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
           }
         }
         
-        finalBuffer = Buffer.from(await pdfDoc.save());
-      } catch (watermarkErr) {
-        console.error('Error adding watermark, proceeding with original:', watermarkErr);
+          finalBuffer = Buffer.from(await pdfDoc.save());
+        } catch (watermarkErr) {
+          console.error('Error adding watermark, proceeding with original:', watermarkErr);
+        }
       }
 
       const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
@@ -143,7 +146,7 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       fileName: note.title
     });
 
-    return ApiResponse.created(res, note, 'PDF uploaded and note created successfully');
+    return ApiResponse.created(res, note, 'File uploaded and note created successfully');
   } catch (error) {
     next(error);
   }
