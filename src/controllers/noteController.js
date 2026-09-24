@@ -1,4 +1,5 @@
 import { Readable } from 'stream';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
@@ -38,6 +39,7 @@ export const searchNotesHandler = async (req, res, next) => {
 export const getNote = async (req, res, next) => {
   try {
     const note = await Note.findById(req.params.id)
+      .select('-pdfUrl -imagekitFileId -imagekitFilePath')
       .populate('uploadedBy', 'name email')
       .lean();
 
@@ -53,7 +55,7 @@ export const getNote = async (req, res, next) => {
 
 /**
  * GET /api/notes/:id/pdf
- * Redirect to the PDF file from ImageKit for the given note.
+ * Stream the clean PDF for online viewing.
  */
 export const streamNotePdf = async (req, res, next) => {
   try {
@@ -62,8 +64,64 @@ export const streamNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
 
-    // Redirect directly to the CDN URL to avoid serverless payload size limits (6MB)
-    res.redirect(302, note.pdfUrl);
+    const response = await fetch(note.pdfUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF from storage: ${response.statusText}`);
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(note.title)}.pdf"`);
+
+    Readable.fromWeb(response.body).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/notes/:id/download
+ * Download a dynamically watermarked PDF.
+ */
+export const downloadNotePdf = async (req, res, next) => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note || !note.pdfUrl) {
+      return res.status(404).send('PDF not found');
+    }
+
+    const response = await fetch(note.pdfUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF from storage: ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    
+    const pages = pdfDoc.getPages();
+    const watermarkText = `ABES Autonomy\nDownloaded by: ${req.user?.email || req.user?.name || 'Student'}\nDate: ${new Date().toLocaleString()}`;
+    
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      
+      // Simple math to center a 3-line text block, roughly
+      page.drawText(watermarkText, {
+        x: width / 2 - 150,
+        y: height / 2,
+        size: 24,
+        color: rgb(0.8, 0.8, 0.8),
+        opacity: 0.5,
+        rotate: degrees(45),
+        lineHeight: 30,
+      });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(note.title)}.pdf"`);
+    res.setHeader('Content-Length', pdfBytes.length);
+
+    res.end(Buffer.from(pdfBytes));
   } catch (error) {
     next(error);
   }

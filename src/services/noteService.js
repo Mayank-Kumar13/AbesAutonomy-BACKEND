@@ -62,6 +62,7 @@ export const getFilteredNotes = async (query) => {
 
   const [notes, total] = await Promise.all([
     Note.find(filter)
+      .select('-pdfUrl -imagekitFileId -imagekitFilePath')
       .sort(sortObj)
       .skip(skip)
       .limit(limit)
@@ -89,6 +90,7 @@ export const searchNotes = async (query) => {
 
   const [notes, total] = await Promise.all([
     Note.find(filter, { score: { $meta: 'textScore' } })
+      .select('-pdfUrl -imagekitFileId -imagekitFilePath')
       .sort({ score: { $meta: 'textScore' } })
       .skip(skip)
       .limit(limit)
