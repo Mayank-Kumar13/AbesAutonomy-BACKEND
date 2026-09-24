@@ -90,10 +90,10 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
           const { width, height } = page.getSize();
           
           if (logoImage) {
-            const logoDims = logoImage.scale(0.5);
+            const logoDims = logoImage.scale(0.25);
             page.drawImage(logoImage, {
               x: width / 2 - logoDims.width / 2,
-              y: height / 2,
+              y: (height / 2) - (logoDims.height / 2),
               width: logoDims.width,
               height: logoDims.height,
               opacity: 0.15,
