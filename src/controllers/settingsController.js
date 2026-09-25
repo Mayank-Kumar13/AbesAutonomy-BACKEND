@@ -54,3 +54,22 @@ export const updateSettings = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/settings/react
+ * Increment the reaction count for the current announcement
+ */
+export const reactToAnnouncement = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+    if (settings && settings.announcement && settings.announcement.active) {
+      settings.announcement.reactions = (settings.announcement.reactions || 0) + 1;
+      await settings.save();
+      // Optional: Broadcast the new reaction count via sockets
+      broadcastAnnouncement(settings.announcement);
+    }
+    return ApiResponse.success(res, settings?.announcement?.reactions || 0, 'Reaction added');
+  } catch (error) {
+    next(error);
+  }
+};

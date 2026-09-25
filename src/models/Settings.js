@@ -8,7 +8,8 @@ const settingsSchema = new mongoose.Schema({
   },
   announcement: {
     message: { type: String, default: '' },
-    active: { type: Boolean, default: false }
+    active: { type: Boolean, default: false },
+    reactions: { type: Number, default: 0 }
   }
 }, { timestamps: true });
 
