@@ -5,6 +5,10 @@ const settingsSchema = new mongoose.Schema({
     type: String,
     enum: ['LIVE', 'UNDER_CONSTRUCTION'],
     default: 'LIVE'
+  },
+  announcement: {
+    message: { type: String, default: '' },
+    active: { type: Boolean, default: false }
   }
 }, { timestamps: true });
 

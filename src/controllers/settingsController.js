@@ -1,6 +1,7 @@
 import Settings from '../models/Settings.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { logAdminActivity } from '../utils/logger.js';
+import { broadcastAnnouncement } from '../utils/socketManager.js';
 
 /**
  * GET /api/settings
@@ -24,7 +25,7 @@ export const getSettings = async (req, res, next) => {
  */
 export const updateSettings = async (req, res, next) => {
   try {
-    const { websiteStatus } = req.body;
+    const { websiteStatus, announcement } = req.body;
     
     if (websiteStatus && !['LIVE', 'UNDER_CONSTRUCTION'].includes(websiteStatus)) {
       return ApiResponse.badRequest(res, 'Invalid website status');
@@ -32,12 +33,19 @@ export const updateSettings = async (req, res, next) => {
 
     let settings = await Settings.findOne();
     if (!settings) {
-      settings = await Settings.create({ websiteStatus });
+      settings = await Settings.create({ websiteStatus, announcement });
     } else {
       if (websiteStatus) {
         settings.websiteStatus = websiteStatus;
       }
+      if (announcement !== undefined) {
+        settings.announcement = announcement;
+      }
       await settings.save();
+    }
+
+    if (announcement !== undefined) {
+      broadcastAnnouncement(settings.announcement);
     }
 
     await logAdminActivity(req, 'CHANGE_STATUS', `Changed website status to ${settings.websiteStatus}`);

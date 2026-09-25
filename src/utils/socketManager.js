@@ -87,3 +87,7 @@ export const getActiveStaff = () => {
   // Unused typically, but you can change it to getActiveUsers if needed
   return Array.from(activeUsers.values());
 };
+export const broadcastAnnouncement = (announcement) => {
+  if (!io) return;
+  io.emit('new_announcement', announcement);
+};
