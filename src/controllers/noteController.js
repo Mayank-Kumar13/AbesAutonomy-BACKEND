@@ -5,7 +5,6 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { logAdminActivity } from '../utils/logger.js';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
