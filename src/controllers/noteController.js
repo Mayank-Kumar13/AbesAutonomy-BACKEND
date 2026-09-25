@@ -45,7 +45,7 @@ export const searchNotesHandler = async (req, res, next) => {
 export const getNote = async (req, res, next) => {
   try {
     const note = await Note.findById(req.params.id)
-      .select('-pdfUrl -imagekitFileId -imagekitFilePath')
+      .select('-imagekitFileId -imagekitFilePath')
       .populate('uploadedBy', 'name email')
       .lean();
 
@@ -75,8 +75,15 @@ export const streamNotePdf = async (req, res, next) => {
       throw new Error(`Failed to fetch PDF from storage: ${response.statusText}`);
     }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(note.title)}.pdf"`);
+    const contentType = response.headers.get('content-type') || 'application/pdf';
+    res.setHeader('Content-Type', contentType);
+    
+    let ext = 'pdf';
+    if (contentType === 'image/jpeg') ext = 'jpg';
+    else if (contentType === 'image/png') ext = 'png';
+    else if (contentType === 'image/webp') ext = 'webp';
+    
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(note.title)}.${ext}"`);
 
     Readable.fromWeb(response.body).pipe(res);
   } catch (error) {
