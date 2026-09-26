@@ -30,7 +30,7 @@ cp .env.example .env
 npm run seed
 ```
 This creates:
-- Admin user: `admin@abesautonomy.com` / `admin123456`
+- Admin user: (Configured via `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env`)
 - Student user: `ankit@email.com` / `student123`
 - Sample notes for all subjects
 
@@ -99,6 +99,8 @@ The API will be available at `http://localhost:5000/api`
 | PORT | | Server port (default: 5000) |
 | NODE_ENV | | Environment (default: development) |
 | FRONTEND_URL | | CORS origin (default: http://localhost:5173) |
+| SEED_ADMIN_EMAIL | | Admin email for seeding |
+| SEED_ADMIN_PASSWORD | | Admin password for seeding |
 
 ## Project Structure
 

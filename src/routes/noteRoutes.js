@@ -19,17 +19,18 @@ import {
   searchNotesValidation,
   noteIdValidation,
 } from '../validators/noteValidator.js';
+import { searchLimiter, viewCounterLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
 // ─── Public routes ────────────────────────────────────
 // Search must come BEFORE /:id to avoid route conflict
-router.get('/search', searchNotesValidation, validate, searchNotesHandler);
+router.get('/search', searchLimiter, searchNotesValidation, validate, searchNotesHandler);
 router.get('/', listNotesValidation, validate, listNotes);
 router.get('/:id', noteIdValidation, validate, getNote);
 router.get('/:id/pdf', optionalAuth, noteIdValidation, validate, streamNotePdf);
 router.get('/:id/download', requireAuth, noteIdValidation, validate, downloadNotePdf);
-router.post('/:id/view', noteIdValidation, validate, incrementViewCount);
+router.post('/:id/view', viewCounterLimiter, noteIdValidation, validate, incrementViewCount);
 
 // ─── Admin routes ─────────────────────────────────────
 router.post('/', requireAuth, requireAdminOrCoordinator, createNoteValidation, validate, createNote);

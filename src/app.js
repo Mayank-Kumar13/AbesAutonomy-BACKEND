@@ -28,32 +28,56 @@ app.use(
     crossOriginResourcePolicy: {
       policy: 'cross-origin',
     },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    },
+    frameguard: {
+      action: 'deny'
+    },
+    referrerPolicy: {
+      policy: 'strict-origin-when-cross-origin'
+    },
+    xContentTypeOptions: true,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https://ik.imagekit.io"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
   })
 );
 
 // ─── CORS ─────────────────────────────────────────────
 const allowedOrigins = [
   'https://abes.work',
-  'https://www.abes.work',
-  'http://localhost:5173',
-  'https://warm-blancmange-c9edb0.netlify.app'
+  'https://www.abes.work'
 ];
+
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173');
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, mobile apps, etc.)
+      // Allow requests with no origin (Postman, mobile apps, etc.) only in development maybe? 
+      // Wait, for production web apps with credentials, origin should be present from browsers.
+      // But let's keep it if mobile apps are used.
       if (!origin) {
         return callback(null, true);
       }
 
       // Allow exactly known domains
       if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Dynamically allow any Vercel preview/production domains
-      if (origin.endsWith('vercel.app')) {
         return callback(null, true);
       }
 

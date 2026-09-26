@@ -35,7 +35,7 @@ const handleSuspiciousIP = async (req, res, next, options) => {
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -51,7 +51,7 @@ export const apiLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -68,7 +68,7 @@ export const authLimiter = rateLimit({
  */
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 500,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -80,12 +80,44 @@ export const uploadLimiter = rateLimit({
 });
 
 /**
+ * Search rate limiter.
+ */
+export const searchLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // 30 searches per 5 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
+  message: {
+    success: false,
+    message: 'Too many searches. Please try again later.',
+  },
+});
+
+/**
+ * View counter rate limiter.
+ */
+export const viewCounterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Max 30 views per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
+  message: {
+    success: false,
+    message: 'View limit reached.',
+  },
+});
+
+/**
  * 24-Hour strict rate limiter specifically for Forgot Password (by IP).
  * Limits to 2 requests per day per device/IP.
  */
 export const forgotPasswordLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
-  max: 2, // 2 requests per day per IP
+  max: 3, // 3 requests per day per IP
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
@@ -111,7 +143,7 @@ export const forgotPasswordLimiter = rateLimit({
     
     res.status(429).json({
       success: false,
-      message: 'You have reached your daily limit of 2 requests for password reset. Please try again tomorrow.'
+      message: 'You have reached your daily limit for password reset. Please try again tomorrow.'
     });
   },
   validate: { xForwardedForHeader: false, default: true }

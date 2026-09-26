@@ -21,23 +21,23 @@ export const buildNoteFilter = (query) => {
   const filter = { isPublished: true };
 
   // Allow "common" branch subjects to be visible regardless of which specific branch the student selects
-  if (query.branch) {
+  if (typeof query.branch === 'string') {
     const branchVal = query.branch.toLowerCase();
     filter.branch = { $in: [branchVal, 'common'] };
   }
   
-  if (query.year) filter.year = parseInt(query.year, 10);
-  if (query.semester) filter.semester = parseInt(query.semester, 10);
-  if (query.resourceType) filter.resourceType = query.resourceType.toLowerCase();
+  if (typeof query.year === 'string') filter.year = parseInt(query.year, 10);
+  if (typeof query.semester === 'string') filter.semester = parseInt(query.semester, 10);
+  if (typeof query.resourceType === 'string') filter.resourceType = query.resourceType.toLowerCase();
   
   // Map frontend subject request to all possible variations in the DB
-  if (query.subject) {
+  if (typeof query.subject === 'string') {
     const requestedSubject = query.subject.toUpperCase();
     const aliases = SUBJECT_ALIASES[requestedSubject] || [requestedSubject];
     filter.subject = { $in: aliases };
   }
   
-  if (query.unit) filter.unit = parseInt(query.unit, 10);
+  if (typeof query.unit === 'string') filter.unit = parseInt(query.unit, 10);
 
   return filter;
 };
@@ -52,7 +52,7 @@ export const getFilteredNotes = async (query) => {
   const skip = (page - 1) * limit;
 
   // Sort: default by createdAt descending
-  const sortField = query.sort || '-createdAt';
+  const sortField = (typeof query.sort === 'string' && query.sort) ? query.sort : '-createdAt';
   const sortObj = {};
   if (sortField.startsWith('-')) {
     sortObj[sortField.slice(1)] = -1;
@@ -78,7 +78,7 @@ export const getFilteredNotes = async (query) => {
  * Full-text search notes.
  */
 export const searchNotes = async (query) => {
-  const searchQuery = query.q;
+  const searchQuery = (typeof query.q === 'string') ? query.q : '';
   const page = Math.max(1, parseInt(query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
   const skip = (page - 1) * limit;

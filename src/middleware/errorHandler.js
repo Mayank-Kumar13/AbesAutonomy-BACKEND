@@ -34,7 +34,9 @@ const errorHandler = (err, req, res, _next) => {
   if (err.name === 'CastError') {
     return res.status(400).json({
       success: false,
-      message: `Invalid ${err.path}: ${err.value}`,
+      message: env.NODE_ENV === 'production' 
+        ? 'Invalid identifier format' 
+        : `Invalid ${err.path}: ${err.value}`,
     });
   }
 

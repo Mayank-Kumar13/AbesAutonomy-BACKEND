@@ -82,14 +82,22 @@ async function runImport() {
     await mongoose.connect(MONGODB_URI);
     console.log('✅ Connected\n');
 
+    const adminEmail = process.env.SEED_ADMIN_EMAIL;
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      console.error('❌ SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set in .env');
+      process.exit(1);
+    }
+
     // Make sure we have an admin user
-    let adminUser = await User.findOne({ email: 'admin@abesautonomy.com' });
+    let adminUser = await User.findOne({ email: adminEmail });
     if (!adminUser) {
       console.log('👤 Creating admin user...');
       adminUser = await User.create({
         name: 'Admin',
-        email: 'admin@abesautonomy.com',
-        password: 'admin123456',
+        email: adminEmail,
+        password: adminPassword,
         role: 'admin',
       });
     }

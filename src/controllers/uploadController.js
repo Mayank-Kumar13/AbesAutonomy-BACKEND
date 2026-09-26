@@ -67,6 +67,26 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Resource type is required.');
     }
 
+    // Validate File Size
+    if (req.file.size > 50 * 1024 * 1024) {
+      return ApiResponse.badRequest(res, 'File size exceeds the 50MB limit.');
+    }
+
+    // Validate PDF magic bytes
+    if (req.file.mimetype === 'application/pdf') {
+      const magicBytes = req.file.buffer.toString('hex', 0, 4);
+      // %PDF in hex is 25504446
+      if (magicBytes !== '25504446') {
+        return ApiResponse.badRequest(res, 'Invalid PDF file structure or signature.');
+      }
+    }
+
+    // Sanitize filename
+    const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    if (!sanitizedFilename) {
+      return ApiResponse.badRequest(res, 'Invalid filename.');
+    }
+
     // Upload to ImageKit
     let ikResult;
     try {
@@ -76,7 +96,7 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
 
       const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
       const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-      ikResult = await uploadPdf(finalBuffer, req.file.originalname, folder);
+      ikResult = await uploadPdf(finalBuffer, sanitizedFilename, folder);
     } catch (ikError) {
       console.error('ImageKit upload error:', ikError);
       return ApiResponse.error(res, `ImageKit upload failed: ${ikError.message || 'Please verify configuration.'}`, 502);
