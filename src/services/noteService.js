@@ -106,7 +106,10 @@ export const searchNotes = async (query) => {
  */
 export const getDistinctSubjects = async (filters = {}) => {
   const match = { isPublished: true };
-  if (filters.branch) match.branch = filters.branch.toLowerCase();
+  if (filters.branch) {
+    const branchVal = filters.branch.toLowerCase();
+    match.branch = { $in: [branchVal, 'common'] };
+  }
   if (filters.year) match.year = parseInt(filters.year, 10);
   if (filters.resourceType) match.resourceType = filters.resourceType.toLowerCase();
 
