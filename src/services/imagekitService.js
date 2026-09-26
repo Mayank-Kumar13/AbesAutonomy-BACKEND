@@ -29,6 +29,27 @@ export const uploadPdf = async (fileBuffer, fileName, folder = '/notes') => {
   };
 };
 
+export const uploadImage = async (fileBuffer, fileName, folder = '/images') => {
+  const ik = getImageKit();
+  if (!ik) {
+    throw new Error('ImageKit is not configured. Please set ImageKit credentials in .env');
+  }
+
+  const response = await ik.upload({
+    file: fileBuffer,
+    fileName: fileName,
+    folder: folder,
+    useUniqueFileName: true,
+  });
+
+  return {
+    url: response.url,
+    fileId: response.fileId,
+    filePath: response.filePath,
+    thumbnailUrl: response.thumbnailUrl || '',
+  };
+};
+
 /**
  * Delete a file from ImageKit.
  * @param {string} fileId - ImageKit file ID
@@ -77,6 +98,7 @@ export const listFiles = async (options = {}) => {
 
 export default {
   uploadPdf,
+  uploadImage,
   deleteFile,
   getFileDetails,
   listFiles,

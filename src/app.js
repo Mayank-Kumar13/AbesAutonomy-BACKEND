@@ -143,6 +143,7 @@ app.use((req, res, next) => {
 
 import settingsRoutes from './routes/settingsRoutes.js';
 import subjectRoutes from './routes/subjectRoutes.js';
+import creditsRoutes from './routes/creditsRoutes.js';
 
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
@@ -156,6 +157,7 @@ app.use('/api/tracking', trackingRoutes); // Fallback for cached clients
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subjects', subjectRoutes);
+app.use('/api/credits', creditsRoutes);
 
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {
