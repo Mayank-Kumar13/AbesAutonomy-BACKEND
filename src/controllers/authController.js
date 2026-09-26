@@ -173,7 +173,7 @@ export const verifyOtp = async (req, res, next) => {
 
     return ApiResponse.success(
       res,
-      { user: user.toSafeJSON() },
+      { user: user.toSafeJSON(), token },
       purpose === 'signup' ? 'Email verified successfully' : 'Login successful'
     );
   } catch (error) {
@@ -255,17 +255,4 @@ export const updateProfile = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-/**
- * POST /api/auth/logout
- */
-export const logout = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-  });
-  return ApiResponse.success(res, null, 'Logged out successfully');
 };
