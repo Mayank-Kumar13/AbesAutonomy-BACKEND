@@ -14,6 +14,17 @@ const creditSectionSchema = new mongoose.Schema(
       maxlength: [500, 'Description cannot exceed 500 characters'],
       default: '',
     },
+    // 'team' = full-size showcase card (Credit_Card). 'contributor' = small,
+    // plain "government type" card (ContributorCard). Only admin/coordinator
+    // can ever create/edit/delete either kind — see creditsRoutes.js.
+    type: {
+      type: String,
+      enum: {
+        values: ['team', 'contributor'],
+        message: 'Section type must be either "team" or "contributor"',
+      },
+      default: 'team',
+    },
     displayOrder: {
       type: Number,
       default: 0,
