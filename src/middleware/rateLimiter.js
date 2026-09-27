@@ -37,7 +37,7 @@ const handleSuspiciousIP = async (req, res, next, options) => {
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
+  max: 1000, // Increased to handle high legitimate load
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
