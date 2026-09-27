@@ -36,6 +36,15 @@ const startServer = async () => {
   process.on('SIGINT', () => shutdown('SIGINT'));
 };
 
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL: Uncaught Exception:', err);
+  // Optional: process.exit(1); depending on whether we want to risk corrupted state
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 startServer().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);

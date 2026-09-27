@@ -23,7 +23,7 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB max
+    fileSize: 25 * 1024 * 1024, // 25MB max to prevent OOM crashes on high load
   },
 });
 

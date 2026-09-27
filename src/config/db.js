@@ -12,6 +12,10 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
       dbName: 'abes_autonomy',
+      maxPoolSize: 50,
+      minPoolSize: 5,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s so the server doesn't hang
+      socketTimeoutMS: 45000,
     });
     cachedConnection = conn;
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);

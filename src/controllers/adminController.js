@@ -59,15 +59,15 @@ export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find()
       .select('name email role assignedBranches provider emailVerified lastLogin lastActiveAt loginCount totalWatchTimeMs createdAt')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const now = Date.now();
     const withLiveFlag = users.map((u) => {
-      const obj = u.toObject();
-      obj.isLive = obj.lastActiveAt
-        ? now - new Date(obj.lastActiveAt).getTime() < LIVE_WINDOW_MS
+      u.isLive = u.lastActiveAt
+        ? now - new Date(u.lastActiveAt).getTime() < LIVE_WINDOW_MS
         : false;
-      return obj;
+      return u;
     });
 
     return ApiResponse.success(res, withLiveFlag);
