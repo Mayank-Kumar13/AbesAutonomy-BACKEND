@@ -20,7 +20,7 @@ import activityRoutes from './routes/activityRoutes.js';
 const app = express();
 
 // ─── Render / Reverse Proxy ──────────────────────────
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // ─── Security middleware ─────────────────────────────
 app.use(

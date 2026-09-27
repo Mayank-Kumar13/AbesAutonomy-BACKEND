@@ -2,8 +2,10 @@ import rateLimit from 'express-rate-limit';
 import SuspiciousIP from '../models/SuspiciousIP.js';
 
 const keyGenerator = (req) => {
-  // express 'trust proxy' already handles x-forwarded-for securely and populates req.ip
-  // Using custom parsing of x-forwarded-for can be vulnerable to IP spoofing if not careful.
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  if (xForwardedFor) {
+    return xForwardedFor.split(',')[0].trim();
+  }
   return req.ip || req.headers['x-nf-client-connection-ip'] || 'unknown';
 };
 
