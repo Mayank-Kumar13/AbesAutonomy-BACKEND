@@ -11,7 +11,7 @@ export const getSettings = async (req, res, next) => {
   try {
     let settings = await Settings.findOne();
     if (!settings) {
-      settings = await Settings.create({ websiteStatus: 'UNDER_CONSTRUCTION' });
+      settings = await Settings.create({ websiteStatus: 'LIVE' });
     }
     return ApiResponse.success(res, settings);
   } catch (error) {
