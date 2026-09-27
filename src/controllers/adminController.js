@@ -83,7 +83,7 @@ export const getUsers = async (req, res, next) => {
 export const getLogs = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
-    const logs = await LoginLog.find().sort({ createdAt: -1 }).limit(limit);
+    const logs = await LoginLog.find().sort({ createdAt: -1 }).limit(limit).lean();
     return ApiResponse.success(res, logs);
   } catch (error) {
     next(error);
@@ -209,7 +209,7 @@ export const clearLogs = async (req, res, next) => {
 export const getAdminActivities = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
-    const activities = await AdminActivity.find().sort({ createdAt: -1 }).limit(limit);
+    const activities = await AdminActivity.find().sort({ createdAt: -1 }).limit(limit).lean();
     return ApiResponse.success(res, activities);
   } catch (error) {
     next(error);
@@ -222,7 +222,7 @@ export const getAdminActivities = async (req, res, next) => {
 export const getSuspiciousIPs = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
-    const ips = await SuspiciousIP.find().sort({ updatedAt: -1 }).limit(limit);
+    const ips = await SuspiciousIP.find().sort({ updatedAt: -1 }).limit(limit).lean();
     return ApiResponse.success(res, ips);
   } catch (error) {
     next(error);

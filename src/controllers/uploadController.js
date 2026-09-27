@@ -64,8 +64,8 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
     }
 
     // Validate File Size
-    if (req.file.size > 50 * 1024 * 1024) {
-      return ApiResponse.badRequest(res, 'File size exceeds the 50MB limit.');
+    if (req.file.size > 25 * 1024 * 1024) {
+      return ApiResponse.badRequest(res, 'File size exceeds the 25MB limit.');
     }
 
     // Validate PDF magic bytes

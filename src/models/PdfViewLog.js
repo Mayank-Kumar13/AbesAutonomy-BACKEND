@@ -47,6 +47,8 @@ const pdfViewLogSchema = new mongoose.Schema(
 
 // Optional: Index to quickly find recent logs by the same user and PDF
 pdfViewLogSchema.index({ user: 1, pdfTitle: 1, endTime: -1 });
+// Essential standalone index for sorting logs globally in admin panel
+pdfViewLogSchema.index({ endTime: -1 });
 
 const PdfViewLog = mongoose.model('PdfViewLog', pdfViewLogSchema);
 

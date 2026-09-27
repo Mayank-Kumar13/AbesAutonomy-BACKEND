@@ -26,7 +26,7 @@ export const getSubjects = async (req, res, next) => {
       filter.group = { $in: [group.toLowerCase(), 'common'] };
     }
 
-    const subjects = await Subject.find(filter).sort({ displayOrder: 1, name: 1 });
+    const subjects = await Subject.find(filter).sort({ displayOrder: 1, name: 1 }).lean();
     return ApiResponse.success(res, subjects);
   } catch (error) {
     next(error);
@@ -39,7 +39,7 @@ export const getSubjects = async (req, res, next) => {
  */
 export const getAllSubjects = async (req, res, next) => {
   try {
-    const subjects = await Subject.find({}).sort({ year: 1, displayOrder: 1, name: 1 });
+    const subjects = await Subject.find({}).sort({ year: 1, displayOrder: 1, name: 1 }).lean();
     return ApiResponse.success(res, subjects);
   } catch (error) {
     next(error);

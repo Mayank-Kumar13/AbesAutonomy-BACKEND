@@ -11,5 +11,7 @@ const loginLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+loginLogSchema.index({ createdAt: -1 });
+
 const LoginLog = mongoose.model('LoginLog', loginLogSchema);
 export default LoginLog;

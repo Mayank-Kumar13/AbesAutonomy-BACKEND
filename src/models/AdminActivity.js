@@ -58,5 +58,7 @@ const adminActivitySchema = new mongoose.Schema(
   }
 );
 
+adminActivitySchema.index({ createdAt: -1 });
+
 const AdminActivity = mongoose.model('AdminActivity', adminActivitySchema);
 export default AdminActivity;

@@ -107,8 +107,10 @@ const userSchema = new mongoose.Schema(
 userSchema.index(
   { provider: 1, providerId: 1 },
   { unique: true, partialFilterExpression: { providerId: { $type: 'string' } } }
-  
 );
+
+// Index for live user counting query
+userSchema.index({ lastActiveAt: -1 });
 
 // ─── Pre-save: hash password ─────────────────────────
 userSchema.pre('save', async function (next) {

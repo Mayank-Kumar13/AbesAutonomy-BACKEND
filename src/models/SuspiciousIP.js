@@ -32,6 +32,8 @@ const suspiciousIPSchema = new mongoose.Schema(
   }
 );
 
+suspiciousIPSchema.index({ updatedAt: -1 });
+
 const SuspiciousIP = mongoose.model('SuspiciousIP', suspiciousIPSchema);
 
 export default SuspiciousIP;

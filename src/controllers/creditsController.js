@@ -26,7 +26,7 @@ export const getPublicCredits = async (req, res, next) => {
 // --- Admin Section Endpoints ---
 export const getAllSections = async (req, res, next) => {
   try {
-    const sections = await CreditSection.find().sort({ displayOrder: 1 });
+    const sections = await CreditSection.find().sort({ displayOrder: 1 }).lean();
     return ApiResponse.success(res, sections, 'Sections fetched successfully');
   } catch (error) {
     next(error);
@@ -72,7 +72,7 @@ export const deleteSection = async (req, res, next) => {
 export const getMembersBySection = async (req, res, next) => {
   try {
     const { sectionId } = req.params;
-    const members = await CreditMember.find({ sectionId }).sort({ displayOrder: 1 });
+    const members = await CreditMember.find({ sectionId }).sort({ displayOrder: 1 }).lean();
     return ApiResponse.success(res, members, 'Members fetched successfully');
   } catch (error) {
     next(error);
