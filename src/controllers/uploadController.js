@@ -15,12 +15,8 @@ const __dirname = path.dirname(__filename);
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only PDF and image files are allowed.'), false);
-  }
+  // Allow all file types (docs, pdfs, images, etc.)
+  cb(null, true);
 };
 
 export const upload = multer({
