@@ -9,7 +9,6 @@ import Visitor from '../models/Visitor.js';
 import SyntheticVisitor from '../models/SyntheticVisitor.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
-import { getLiveUserCount } from '../utils/socketManager.js';
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // active in last 5 min = "live"
 
@@ -19,7 +18,9 @@ const LIVE_WINDOW_MS = 5 * 60 * 1000; // active in last 5 min = "live"
 export const getStats = async (req, res, next) => {
   try {
     const totalUsers = await User.countDocuments();
-    const liveUsers = getLiveUserCount();
+    const liveUsers = await User.countDocuments({
+      lastActiveAt: { $gte: new Date(Date.now() - LIVE_WINDOW_MS) },
+    });
     const verifiedUsers = await User.countDocuments({ emailVerified: true });
     const totalVisitors = await Visitor.countDocuments();
 
