@@ -84,8 +84,14 @@ const broadcastActiveUsers = () => {
 };
 
 export const getActiveStaff = () => {
-  // Unused typically, but you can change it to getActiveUsers if needed
   return Array.from(activeUsers.values());
+};
+
+export const getLiveUserCount = () => {
+  // Return the count of unique userIds if one user has multiple tabs, 
+  // or just return the size. For accuracy, let's count unique userIds.
+  const uniqueUsers = new Set(Array.from(activeUsers.values()).map(u => u.userId));
+  return uniqueUsers.size;
 };
 export const broadcastAnnouncement = (announcement) => {
   if (!io) return;
