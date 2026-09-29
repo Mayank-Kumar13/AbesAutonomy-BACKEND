@@ -89,3 +89,43 @@ export const deleteReview = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/reviews/:id/react
+ * Authenticated — toggle reaction on a review.
+ */
+export const toggleReaction = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const review = await Review.findById(id);
+    if (!review) {
+      return ApiResponse.notFound(res, 'Review not found.');
+    }
+
+    const hasReacted = review.reactions.includes(userId);
+    
+    if (hasReacted) {
+      // Remove reaction
+      review.reactions = review.reactions.filter(
+        (reactorId) => reactorId.toString() !== userId.toString()
+      );
+      if (req.user.role === 'admin') {
+        review.likedByAdmin = false;
+      }
+    } else {
+      // Add reaction
+      review.reactions.push(userId);
+      if (req.user.role === 'admin') {
+        review.likedByAdmin = true;
+      }
+    }
+
+    await review.save();
+
+    return ApiResponse.success(res, review, hasReacted ? 'Reaction removed' : 'Reaction added');
+  } catch (error) {
+    next(error);
+  }
+};

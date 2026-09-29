@@ -30,6 +30,16 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    reactions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    likedByAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
