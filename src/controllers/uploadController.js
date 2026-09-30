@@ -116,6 +116,7 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       imagekitFilePath: ikResult.filePath,
       thumbnailUrl: ikResult.thumbnailUrl,
       uploadedBy: req.user?._id,
+      isPublished: req.user?.role === 'admin',
     };
 
     const note = await Note.create(noteData);
@@ -192,6 +193,7 @@ export const registerExistingPdf = async (req, res, next) => {
       imagekitFilePath: imagekitFilePath || '',
       thumbnailUrl: thumbnailUrl || '',
       uploadedBy: req.user?._id,
+      isPublished: req.user?.role === 'admin',
     };
 
     const note = await Note.create(noteData);

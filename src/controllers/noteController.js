@@ -143,7 +143,7 @@ export const createNote = async (req, res, next) => {
       imagekitFilePath: req.body.imagekitFilePath || '',
       thumbnailUrl: req.body.thumbnailUrl || '',
       uploadedBy: req.user?._id,
-      isPublished: req.body.isPublished !== undefined ? req.body.isPublished : true,
+      isPublished: req.user?.role === 'admin',
     };
 
     const note = await Note.create(noteData);

@@ -18,7 +18,10 @@ const SUBJECT_ALIASES = {
  * Build a MongoDB filter object from query parameters.
  */
 export const buildNoteFilter = (query) => {
-  const filter = { isPublished: true };
+  const filter = {};
+  if (query.admin !== 'true') {
+    filter.isPublished = true;
+  }
 
   // Allow "common" branch subjects to be visible regardless of which specific branch the student selects
   if (typeof query.branch === 'string') {
