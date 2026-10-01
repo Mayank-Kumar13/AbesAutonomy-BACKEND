@@ -102,10 +102,35 @@ export const downloadNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
     
-    // Redirect directly to the CDN to prevent massive CPU blocking and OOM crashes
-    // On-the-fly watermarking using pdf-lib blocks the Node.js event loop and will crash the server
-    // under high concurrent load (5,000+ users).
-    return res.redirect(302, note.pdfUrl);
+    try {
+      const response = await fetch(note.pdfUrl);
+      if (!response.ok) throw new Error('Failed to fetch PDF from CDN');
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+      
+      pages.forEach((page) => {
+        const { width, height } = page.getSize();
+        page.drawText('ABES Autonomy', {
+          x: width / 2 - 150,
+          y: height / 2,
+          size: 50,
+          color: rgb(0.5, 0.5, 0.5),
+          opacity: 0.4,
+          rotate: degrees(45),
+        });
+      });
+      
+      const pdfBytes = await pdfDoc.save();
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${(note.title || 'document').replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf"`);
+      return res.send(Buffer.from(pdfBytes));
+    } catch (watermarkError) {
+      console.error('Watermarking error:', watermarkError);
+      return res.redirect(302, note.pdfUrl);
+    }
   } catch (error) {
     next(error);
   }
