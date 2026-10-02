@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const RESOURCE_TYPES = ['theory', 'assignment', 'lab_manual', 'pyq', 'handwritten', 'syllabus'];
-const BRANCHES = ['electrical', 'electronics', 'common', 'cse', 'ds', 'aiml', 'ece'];
+const BRANCHES = ['cse', 'it', 'me', 'aids', 'ds', 'aiml', 'ece', 'elce', 'electrical', 'electronics', 'common'];
 
 const noteSchema = new mongoose.Schema(
   {
