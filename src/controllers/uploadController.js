@@ -70,9 +70,9 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
 
     // Validate PDF magic bytes
     if (req.file.mimetype === 'application/pdf') {
-      const magicBytes = req.file.buffer.toString('hex', 0, 4);
-      // %PDF in hex is 25504446
-      if (magicBytes !== '25504446') {
+      // PDF spec allows %PDF to be within the first 1024 bytes
+      const header = req.file.buffer.toString('utf8', 0, Math.min(1024, req.file.buffer.length));
+      if (!header.includes('%PDF')) {
         return ApiResponse.badRequest(res, 'Invalid PDF file structure or signature.');
       }
     }
