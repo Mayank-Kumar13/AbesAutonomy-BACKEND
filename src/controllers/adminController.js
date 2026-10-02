@@ -71,6 +71,13 @@ export const getUsers = async (req, res, next) => {
       return u;
     });
 
+    // Move master admin to the top
+    withLiveFlag.sort((a, b) => {
+      if (a.email === 'abesautonomy30@gmail.com') return -1;
+      if (b.email === 'abesautonomy30@gmail.com') return 1;
+      return 0; // maintain existing sort for others
+    });
+
     return ApiResponse.success(res, withLiveFlag);
   } catch (error) {
     next(error);
@@ -141,11 +148,17 @@ export const deleteReview = async (req, res, next) => {
 export const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id);
 
     if (!user) {
       return ApiResponse.notFound(res, 'User not found');
     }
+
+    if (user.email === 'abesautonomy30@gmail.com') {
+      return ApiResponse.forbidden(res, 'Cannot delete the master admin account');
+    }
+
+    await User.findByIdAndDelete(id);
     
     await logAdminActivity(req, 'DELETE_USER', `Deleted user ${user.email}`);
 
@@ -170,6 +183,10 @@ export const updateUserRole = async (req, res, next) => {
     const user = await User.findById(id);
     if (!user) {
       return ApiResponse.notFound(res, 'User not found');
+    }
+
+    if (user.email === 'abesautonomy30@gmail.com' && role !== 'admin') {
+      return ApiResponse.forbidden(res, 'Cannot demote the master admin account');
     }
 
     const previousRole = user.role;
