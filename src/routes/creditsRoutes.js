@@ -5,6 +5,7 @@ import {
   createSection,
   updateSection,
   deleteSection,
+  reorderSections,
   getMembersBySection,
   createMember,
   updateMember,
@@ -24,6 +25,7 @@ router.use(requireAuth, requireAdminOrCoordinator);
 // Section routes
 router.get('/sections', getAllSections);
 router.post('/sections', createSection);
+router.put('/sections/reorder', reorderSections);
 router.put('/sections/:id', updateSection);
 router.delete('/sections/:id', deleteSection);
 

@@ -68,6 +68,25 @@ export const deleteSection = async (req, res, next) => {
   }
 };
 
+export const reorderSections = async (req, res, next) => {
+  try {
+    const { sectionIds } = req.body;
+    if (!Array.isArray(sectionIds)) {
+      return res.status(400).json({ success: false, message: 'sectionIds must be an array' });
+    }
+
+    const updatePromises = sectionIds.map((id, index) =>
+      CreditSection.findByIdAndUpdate(id, { displayOrder: index }, { new: true })
+    );
+
+    await Promise.all(updatePromises);
+
+    return ApiResponse.success(res, null, 'Sections reordered successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 // --- Admin Member Endpoints ---
 export const getMembersBySection = async (req, res, next) => {
   try {
