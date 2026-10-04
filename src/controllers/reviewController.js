@@ -46,6 +46,10 @@ export const createReview = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'Your review contains inappropriate language and cannot be submitted.');
     }
 
+    if (!req.user.totalWatchTimeMs || req.user.totalWatchTimeMs < 600000) {
+      return ApiResponse.badRequest(res, 'You need at least 10 minutes of watch time before you can submit a review.');
+    }
+
     const existingReview = await Review.findOne({ user: userId });
 
     if (existingReview) {
