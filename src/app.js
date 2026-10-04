@@ -183,6 +183,9 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/credits', creditsRoutes);
 
+import analyticsRoutes from './routes/analyticsRoutes.js';
+app.use('/api/analytics', analyticsRoutes);
+
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {
   res.status(404).json({
