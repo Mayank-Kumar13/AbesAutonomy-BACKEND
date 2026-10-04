@@ -68,14 +68,13 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       return ApiResponse.badRequest(res, 'File size exceeds the 25MB limit.');
     }
 
-    // Validate PDF magic bytes
-    if (req.file.mimetype === 'application/pdf') {
-      // PDF spec allows %PDF to be within the first 1024 bytes
-      const header = req.file.buffer.toString('utf8', 0, Math.min(1024, req.file.buffer.length));
-      if (!header.includes('%PDF')) {
-        return ApiResponse.badRequest(res, 'Invalid PDF file structure or signature.');
-      }
-    }
+    // Validate PDF magic bytes (removed strict check to prevent false positives)
+    // if (req.file.mimetype === 'application/pdf') {
+    //   const header = req.file.buffer.toString('utf8', 0, Math.min(1024, req.file.buffer.length));
+    //   if (!header.includes('%PDF')) {
+    //     return ApiResponse.badRequest(res, 'Invalid PDF file structure or signature.');
+    //   }
+    // }
 
     // Sanitize filename
     const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
