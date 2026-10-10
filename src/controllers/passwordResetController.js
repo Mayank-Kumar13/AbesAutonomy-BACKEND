@@ -7,13 +7,43 @@ import { sendResetEmail } from '../services/emailService.js';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
+const ENCRYPTION_KEY = crypto.scryptSync(env.JWT_SECRET || 'fallback-secret', 'salt', 32);
+
+function decryptCaptcha(token) {
+  try {
+    const textParts = token.split(':');
+    if (textParts.length !== 2) return null;
+    const iv = Buffer.from(textParts[0], 'hex');
+    const encryptedText = Buffer.from(textParts[1], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    const [text, timestamp] = decrypted.split(':');
+    return { text, timestamp: parseInt(timestamp, 10) };
+  } catch (err) {
+    return null;
+  }
+}
+
+function verifyCaptcha(token, input) {
+  if (!token || !input) return false;
+  const decrypted = decryptCaptcha(token);
+  if (!decrypted) return false;
+  if (Date.now() - decrypted.timestamp > 5 * 60 * 1000) return false;
+  return decrypted.text.toLowerCase() === input.toLowerCase();
+}
 /**
  * POST /api/auth/forgot-password
  */
 export const forgotPassword = async (req, res, next) => {
   try {
     console.log('[DIAGNOSTIC] Forgot password controller reached');
-    const { email } = req.body;
+    const { email, captchaToken, captchaValue } = req.body;
+    
+    if (!verifyCaptcha(captchaToken, captchaValue)) {
+      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA');
+    }
     
     // Admin email should not be processed for password resets
     if (email.toLowerCase() === 'abesautonomy30@gmail.com') {
