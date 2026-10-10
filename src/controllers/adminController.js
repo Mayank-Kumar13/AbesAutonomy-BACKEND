@@ -191,6 +191,16 @@ export const updateUserRole = async (req, res, next) => {
 
     const previousRole = user.role;
 
+    // Only master admin can grant admin role
+    if (role === 'admin' && previousRole !== 'admin' && req.user.email !== 'abesautonomy30@gmail.com') {
+      return ApiResponse.forbidden(res, 'Only the master admin can grant the admin role to others.');
+    }
+
+    // Only master admin can revoke admin role
+    if (previousRole === 'admin' && role !== 'admin' && req.user.email !== 'abesautonomy30@gmail.com') {
+      return ApiResponse.forbidden(res, 'Only the master admin can revoke the admin role from another admin.');
+    }
+
     user.role = role;
     user.assignedBranches = [];
     await user.save();
