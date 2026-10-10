@@ -1,5 +1,5 @@
 import { Readable } from 'stream';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { getFilteredNotes, searchNotes } from '../services/noteService.js';
@@ -108,16 +108,21 @@ export const downloadNotePdf = async (req, res, next) => {
       
       const arrayBuffer = await response.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
+      
+      // Explicitly embed a standard font for the watermark
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
       const pages = pdfDoc.getPages();
       
       pages.forEach((page) => {
         const { width, height } = page.getSize();
         page.drawText('ABES Autonomy', {
-          x: width / 2 - 150,
+          x: width / 2 - 170, // adjusted slightly for centering
           y: height / 2,
-          size: 50,
-          color: rgb(0.5, 0.5, 0.5),
-          opacity: 0.4,
+          size: 60,
+          font: helveticaFont,
+          color: rgb(0.6, 0.6, 0.6), // made slightly lighter/different just in case
+          opacity: 0.3, // 0.3 looks a bit better for watermarks
           rotate: degrees(45),
         });
       });
