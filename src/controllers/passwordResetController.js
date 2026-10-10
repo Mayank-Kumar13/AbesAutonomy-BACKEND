@@ -24,6 +24,29 @@ export const forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (user) {
+      const now = new Date();
+
+      // Check if user is currently blocked
+      if (user.passwordResetBlockedUntil && user.passwordResetBlockedUntil > now) {
+        return ApiResponse.notFound(res, 'Account temporarily blocked from requesting password resets. Please try again after 1 week.');
+      }
+
+      // Filter requests to only keep those from the last 24 hours
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      user.passwordResetRequests = (user.passwordResetRequests || []).filter(date => date > oneDayAgo);
+      
+      // Add current request
+      user.passwordResetRequests.push(now);
+
+      // If more than 3 requests in 24 hours, block for 1 week
+      if (user.passwordResetRequests.length > 3) {
+        user.passwordResetBlockedUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        await user.save();
+        return ApiResponse.notFound(res, 'Too many password reset requests. Account blocked from resetting password for 1 week.');
+      }
+
+      await user.save();
+
       const rawToken = crypto.randomBytes(32).toString('hex');
       const tokenHash = hashToken(rawToken);
 

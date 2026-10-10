@@ -97,6 +97,14 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    passwordResetRequests: {
+      type: [Date],
+      default: [],
+    },
+    passwordResetBlockedUntil: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
