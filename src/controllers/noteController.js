@@ -134,7 +134,26 @@ export const downloadNotePdf = async (req, res, next) => {
       return res.send(Buffer.from(pdfBytes));
     } catch (watermarkError) {
       console.error('Watermarking error:', watermarkError);
-      return res.redirect(302, note.pdfUrl);
+      
+      // Fallback: proxy the file directly to avoid CORS issues on frontend fetch redirect
+      try {
+        const fbResponse = await fetch(note.pdfUrl);
+        if (!fbResponse.ok) throw new Error('CDN fetch failed');
+        
+        const contentType = fbResponse.headers.get('content-type') || 'application/pdf';
+        res.setHeader('Content-Type', contentType);
+        
+        let ext = 'pdf';
+        if (contentType === 'image/jpeg') ext = 'jpg';
+        else if (contentType === 'image/png') ext = 'png';
+        else if (contentType === 'image/webp') ext = 'webp';
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${(note.title || 'document').replace(/[^a-zA-Z0-9.-]/g, '_')}.${ext}"`);
+        Readable.fromWeb(fbResponse.body).pipe(res);
+      } catch (fbErr) {
+        console.error('Fallback fetch error:', fbErr);
+        return res.status(500).send('Failed to download file');
+      }
     }
   } catch (error) {
     next(error);
