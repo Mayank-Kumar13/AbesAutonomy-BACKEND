@@ -6,6 +6,7 @@ import {
   updateProfile,
   verifyOtp,
   resendOtp,
+  getCaptcha,
 } from '../controllers/authController.js';
 import {
   forgotPassword,
@@ -32,6 +33,7 @@ import {
 const router = Router();
 
 // ─── Public routes ────────────────────────────────────
+router.get('/captcha', authLimiter, getCaptcha);
 router.post('/register', authLimiter, registerValidation, validate, register);
 router.post('/login', authLimiter, loginValidation, validate, login);
 router.post('/verify-otp', authLimiter, otpVerifyValidation, validate, verifyOtp);

@@ -8,9 +8,67 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendLoginNotificationEmail, sendOtpEmail } from '../services/emailService.js';
 import env from '../config/env.js';
+import svgCaptcha from 'svg-captcha';
 
 const MAX_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000;
+
+// --- CAPTCHA HELPERS ---
+const ENCRYPTION_KEY = crypto.scryptSync(env.JWT_SECRET || 'fallback-secret', 'salt', 32);
+const IV_LENGTH = 16;
+
+function encryptCaptcha(text) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+  let encrypted = cipher.update(`${text}:${Date.now()}`, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return iv.toString('hex') + ':' + encrypted;
+}
+
+function decryptCaptcha(token) {
+  try {
+    const textParts = token.split(':');
+    if (textParts.length !== 2) return null;
+    const iv = Buffer.from(textParts[0], 'hex');
+    const encryptedText = Buffer.from(textParts[1], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    const [text, timestamp] = decrypted.split(':');
+    return { text, timestamp: parseInt(timestamp, 10) };
+  } catch (err) {
+    return null;
+  }
+}
+
+function verifyCaptcha(token, input) {
+  if (!token || !input) return false;
+  const decrypted = decryptCaptcha(token);
+  if (!decrypted) return false;
+  // 5 minutes expiry
+  if (Date.now() - decrypted.timestamp > 5 * 60 * 1000) return false;
+  return decrypted.text.toLowerCase() === input.toLowerCase();
+}
+
+/**
+ * GET /api/auth/captcha
+ */
+export const getCaptcha = (req, res) => {
+  const captcha = svgCaptcha.create({
+    size: 6,
+    noise: 2,
+    color: true,
+    background: '#1e293b' // Matches dark theme nicely
+  });
+  
+  const token = encryptCaptcha(captcha.text);
+  
+  return ApiResponse.success(res, {
+    svg: captcha.data,
+    captchaToken: token
+  }, 'Captcha generated');
+};
 
 const generateOtp = () => String(crypto.randomInt(100000, 999999));
 
@@ -40,7 +98,11 @@ const issueOtp = async (userId, email, purpose) => {
  */
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, captchaToken, captchaValue } = req.body;
+
+    if (!verifyCaptcha(captchaToken, captchaValue)) {
+      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA.');
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -70,7 +132,11 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     console.log('[DIAGNOSTIC] Login OTP controller reached');
-    const { email, password } = req.body;
+    const { email, password, captchaToken, captchaValue } = req.body;
+
+    if (!verifyCaptcha(captchaToken, captchaValue)) {
+      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA.');
+    }
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
