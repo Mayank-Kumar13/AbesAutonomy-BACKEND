@@ -12,10 +12,18 @@ const keyGenerator = (req) => {
 const handleSuspiciousIP = async (req, res, next, options) => {
   try {
     const ip = keyGenerator(req);
+    const email = req.body?.email || req.user?.email || '';
+    const name = req.body?.name || req.user?.name || '';
     const existing = await SuspiciousIP.findOne({ ip });
     
     if (existing) {
       existing.attemptCount += 1;
+      if (email && !existing.relatedEmail?.includes(email)) {
+        existing.relatedEmail = existing.relatedEmail ? `${existing.relatedEmail}, ${email}` : email;
+      }
+      if (name && !existing.relatedName?.includes(name)) {
+        existing.relatedName = existing.relatedName ? `${existing.relatedName}, ${name}` : name;
+      }
       await existing.save();
     } else {
       await SuspiciousIP.create({
@@ -23,6 +31,8 @@ const handleSuspiciousIP = async (req, res, next, options) => {
         endpoint: req.originalUrl,
         method: req.method,
         userAgent: req.headers['user-agent'] || 'unknown',
+        relatedEmail: email,
+        relatedName: name,
       });
     }
   } catch (error) {
@@ -126,10 +136,18 @@ export const forgotPasswordLimiter = rateLimit({
   handler: async (req, res, next, options) => {
     try {
       const ip = keyGenerator(req);
+      const email = req.body?.email || req.user?.email || '';
+      const name = req.body?.name || req.user?.name || '';
       const existing = await SuspiciousIP.findOne({ ip });
       
       if (existing) {
         existing.attemptCount += 1;
+        if (email && !existing.relatedEmail?.includes(email)) {
+          existing.relatedEmail = existing.relatedEmail ? `${existing.relatedEmail}, ${email}` : email;
+        }
+        if (name && !existing.relatedName?.includes(name)) {
+          existing.relatedName = existing.relatedName ? `${existing.relatedName}, ${name}` : name;
+        }
         await existing.save();
       } else {
         await SuspiciousIP.create({
@@ -137,6 +155,8 @@ export const forgotPasswordLimiter = rateLimit({
           endpoint: req.originalUrl,
           method: req.method,
           userAgent: req.headers['user-agent'] || 'unknown',
+          relatedEmail: email,
+          relatedName: name,
         });
       }
     } catch (error) {

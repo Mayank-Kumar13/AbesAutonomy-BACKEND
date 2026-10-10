@@ -22,6 +22,14 @@ const suspiciousIPSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    relatedEmail: {
+      type: String,
+      default: '',
+    },
+    relatedName: {
+      type: String,
+      default: '',
+    },
     isBlocked: {
       type: Boolean,
       default: false,
