@@ -59,29 +59,42 @@ app.use(
 // ─── CORS ─────────────────────────────────────────────
 const allowedOrigins = [
   'https://abes.work',
-  'https://www.abes.work'
+  'https://www.abes.work',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
 ];
 
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:5173');
+if (env.FRONTEND_URL) {
+  try {
+    const parsedOrigin = new URL(env.FRONTEND_URL).origin;
+    if (!allowedOrigins.includes(parsedOrigin)) allowedOrigins.push(parsedOrigin);
+  } catch {
+    if (!allowedOrigins.includes(env.FRONTEND_URL)) allowedOrigins.push(env.FRONTEND_URL);
+  }
 }
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Direct API calls, mobile, curl, health checks
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow all Vercel deployments (production & preview links)
+  if (origin.endsWith('.vercel.app')) return true;
+  // Allow any subdomains of abes.work
+  if (origin.endsWith('.abes.work')) return true;
+  // Allow local dev ports
+  if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return true;
+  return false;
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, mobile apps, etc.) only in development maybe? 
-      // Wait, for production web apps with credentials, origin should be present from browsers.
-      // But let's keep it if mobile apps are used.
-      if (!origin) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
-
-      // Allow exactly known domains
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error('Not allowed by CORS'));
+      // Return false to gracefully block unauthorized origin without throwing a 500 server error
+      return callback(null, false);
     },
 
     credentials: true,
