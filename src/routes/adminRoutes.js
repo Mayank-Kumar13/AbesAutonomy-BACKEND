@@ -11,6 +11,7 @@ import {
   clearLogs, 
   getAdminActivities, 
   getSuspiciousIPs, 
+  clearSuspiciousIPs,
   getEmailLogs, 
   getEmailQuota,
   getTopReaders 
@@ -30,6 +31,7 @@ router.get('/reviews', getReviews);
 router.delete('/reviews/:id', deleteReview);
 router.get('/activities', getAdminActivities);
 router.get('/suspicious-ips', getSuspiciousIPs);
+router.delete('/suspicious-ips', clearSuspiciousIPs);
 router.get('/email-logs', getEmailLogs);
 router.get('/email-quota', getEmailQuota);
 router.get('/top-readers', getTopReaders);

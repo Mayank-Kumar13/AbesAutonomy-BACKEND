@@ -8,8 +8,18 @@ const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
 
+  // Clear any previously blocked or suspicious IP records so no one is locked out
+  try {
+    const SuspiciousIP = (await import('./models/SuspiciousIP.js')).default;
+    await SuspiciousIP.deleteMany({});
+    console.log('   Cleared blocked/suspicious IP records.');
+  } catch (err) {
+    console.warn('   Could not clear suspicious IPs:', err.message);
+  }
+
   // Create HTTP server
   const httpServer = createServer(app);
+
 
   // Initialize Socket.IO
   initSocket(httpServer);

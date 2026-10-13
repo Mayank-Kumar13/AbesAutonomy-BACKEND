@@ -258,6 +258,19 @@ export const getSuspiciousIPs = async (req, res, next) => {
 };
 
 /**
+ * DELETE /api/admin/suspicious-ips
+ */
+export const clearSuspiciousIPs = async (req, res, next) => {
+  try {
+    await SuspiciousIP.deleteMany({});
+    return ApiResponse.success(res, null, 'All blocked/suspicious IPs have been cleared.');
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+/**
  * GET /api/admin/email-logs
  */
 export const getEmailLogs = async (req, res, next) => {
