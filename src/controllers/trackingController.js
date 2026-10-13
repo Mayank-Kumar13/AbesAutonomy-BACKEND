@@ -20,33 +20,51 @@ export const pingLocation = async (req, res) => {
       console.error("User update error in ping:", err);
     }
 
-    // If viewing a PDF, update or create PdfViewLog
+    // If viewing a PDF, update or create PdfViewLog with real active reading duration
     if (pdfTitle) {
       try {
-        const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-        
-        const recentLog = await PdfViewLog.findOne({
-          user: user._id,
-          pdfTitle: pdfTitle,
-          endTime: { $gte: twoMinsAgo }
-        });
+        const { activeDurationMs, isActive } = req.body;
 
-        if (recentLog) {
-          recentLog.endTime = new Date();
-          recentLog.durationMs = recentLog.endTime.getTime() - recentLog.startTime.getTime();
-          await recentLog.save();
+        // Skip adding reading time if user is explicitly idle or inactive
+        if (isActive === false) {
+          return res.status(200).json({ success: true, idle: true });
+        }
+
+        // Anti-cheat: Cap client active duration strictly between 0 and 75 seconds per ping
+        let durationToAdd = 0;
+        if (activeDurationMs !== undefined && activeDurationMs !== null) {
+          durationToAdd = Math.min(Math.max(0, Number(activeDurationMs) || 0), 75000);
         } else {
-          await PdfViewLog.create({
+          // Fallback for standard pings (capped to 60s)
+          durationToAdd = 60000;
+        }
+
+        if (durationToAdd > 0) {
+          const threePointFiveMinsAgo = new Date(Date.now() - 3.5 * 60 * 1000);
+          
+          const recentLog = await PdfViewLog.findOne({
             user: user._id,
-            userName: user.name || "Unknown User",
-            userEmail: user.email || "Unknown Email",
-            pdfId: pdfId || null,
             pdfTitle: pdfTitle,
-            subject: subject || "Unknown Subject",
-            startTime: new Date(),
-            endTime: new Date(),
-            durationMs: 0
+            endTime: { $gte: threePointFiveMinsAgo }
           });
+
+          if (recentLog) {
+            recentLog.endTime = new Date();
+            recentLog.durationMs = (recentLog.durationMs || 0) + durationToAdd;
+            await recentLog.save();
+          } else {
+            await PdfViewLog.create({
+              user: user._id,
+              userName: user.name || "Unknown User",
+              userEmail: user.email || "Unknown Email",
+              pdfId: pdfId || null,
+              pdfTitle: pdfTitle,
+              subject: subject || "Unknown Subject",
+              startTime: new Date(),
+              endTime: new Date(),
+              durationMs: durationToAdd
+            });
+          }
         }
       } catch (err) {
         console.error("PdfViewLog error in ping:", err);
