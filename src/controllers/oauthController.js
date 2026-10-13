@@ -1,7 +1,6 @@
 import User from '../models/User.js';
 import env from '../config/env.js';
 import { generateToken } from '../middleware/auth.js';
-import { sendLoginNotificationEmail } from '../services/emailService.js';
 import {
   getGoogleAuthUrl,
   exchangeGoogleCode,
@@ -71,11 +70,6 @@ export const googleCallback = async (req, res) => {
 
     await recordLogin(user);
 
-    sendLoginNotificationEmail(user.email, {
-      provider: 'Google',
-      time: new Date().toLocaleString(),
-    }).catch((err) => console.error('Login email failed:', err.message));
-
     const token = generateToken(user);
     const cookieOptions = {
       httpOnly: true,
@@ -115,11 +109,6 @@ export const googleCallbackPost = async (req, res) => {
     });
 
     await recordLogin(user);
-
-    sendLoginNotificationEmail(user.email, {
-      provider: 'Google',
-      time: new Date().toLocaleString(),
-    }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
     const cookieOptions = {
@@ -164,11 +153,6 @@ export const githubCallback = async (req, res) => {
 
     await recordLogin(user);
 
-    sendLoginNotificationEmail(user.email, {
-      provider: 'GitHub',
-      time: new Date().toLocaleString(),
-    }).catch((err) => console.error('Login email failed:', err.message));
-
     const token = generateToken(user);
     res.cookie('token', token, {
       httpOnly: true,
@@ -205,11 +189,6 @@ export const githubCallbackPost = async (req, res) => {
     });
 
     await recordLogin(user);
-
-    sendLoginNotificationEmail(user.email, {
-      provider: 'GitHub',
-      time: new Date().toLocaleString(),
-    }).catch((err) => console.error('Login email failed:', err.message));
 
     const token = generateToken(user);
     const cookieOptions = {

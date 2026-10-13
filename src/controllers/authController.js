@@ -6,7 +6,7 @@ import OtpToken from '../models/OtpToken.js';
 import LoginLog from '../models/LoginLog.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { generateToken } from '../middleware/auth.js';
-import { sendLoginNotificationEmail, sendOtpEmail } from '../services/emailService.js';
+import { sendOtpEmail } from '../services/emailService.js';
 import env from '../config/env.js';
 import svgCaptcha from 'svg-captcha';
 
@@ -131,7 +131,7 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    console.log('[DIAGNOSTIC] Login OTP controller reached');
+    console.log('[DIAGNOSTIC] Login controller reached');
     const { email, password, captchaToken, captchaValue } = req.body;
 
     if (!verifyCaptcha(captchaToken, captchaValue)) {
@@ -148,13 +148,44 @@ export const login = async (req, res, next) => {
       return ApiResponse.unauthorized(res, 'Invalid email or password.');
     }
 
-    const purpose = user.emailVerified ? 'login' : 'signup';
-    await issueOtp(user._id, user.email, purpose);
+    // If account was created but email was never verified, verify via OTP
+    if (!user.emailVerified) {
+      await issueOtp(user._id, user.email, 'signup');
+      return ApiResponse.success(
+        res,
+        { userId: user._id, email: user.email, purpose: 'signup' },
+        'Please verify your email to complete registration. OTP sent.'
+      );
+    }
+
+    // Existing verified account: Directly authenticate WITHOUT sending email or OTP!
+    user.lastLogin = new Date();
+    user.lastActiveAt = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
+    await user.save();
+
+    await LoginLog.create({
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      provider: 'email',
+      ip: req.ip || '',
+    });
+
+    const token = generateToken(user);
+    const cookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie('token', token, cookieOptions);
 
     return ApiResponse.success(
       res,
-      { userId: user._id, email: user.email, purpose },
-      'OTP sent to your email. Please verify to continue.'
+      { user: user.toSafeJSON(), token },
+      'Login successful'
     );
   } catch (error) {
     if (error.message && error.message.startsWith('COOLDOWN:')) {
@@ -229,13 +260,6 @@ export const verifyOtp = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };
     res.cookie('token', token, cookieOptions);
-
-    if (purpose === 'login') {
-      sendLoginNotificationEmail(user.email, {
-        provider: 'Email/Password',
-        time: new Date().toLocaleString(),
-      }).catch((err) => console.error('Login email failed:', err.message));
-    }
 
     return ApiResponse.success(
       res,
