@@ -18,6 +18,9 @@ export const getCaptcha = (req, res) => {
   }, 'Captcha disabled');
 };
 
+const MAX_ATTEMPTS = 5;
+const OTP_TTL_MS = 10 * 60 * 1000;
+
 const generateOtp = () => String(crypto.randomInt(100000, 999999));
 
 const issueOtp = async (userId, email, purpose) => {
@@ -55,11 +58,23 @@ export const register = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      if (!existingUser.emailVerified) {
+        existingUser.name = name;
+        existingUser.password = password;
+        await existingUser.save();
+        await issueOtp(existingUser._id, existingUser.email, 'signup');
+        return ApiResponse.created(
+          res,
+          { userId: existingUser._id, email: existingUser.email, purpose: 'signup' },
+          'OTP sent to your email. Please verify to complete signup.'
+        );
+      }
       return ApiResponse.badRequest(res, 'An account with this email already exists.');
     }
 
     const user = await User.create({ name, email, password, emailVerified: false });
     await issueOtp(user._id, user.email, 'signup');
+
 
     return ApiResponse.created(
       res,
