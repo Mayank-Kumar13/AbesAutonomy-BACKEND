@@ -27,13 +27,14 @@ import {
 } from '../validators/passwordResetValidator.js';
 import { 
   authLimiter, 
+  captchaLimiter,
   forgotPasswordLimiter 
 } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
 // ─── Public routes ────────────────────────────────────
-router.get('/captcha', authLimiter, getCaptcha);
+router.get('/captcha', captchaLimiter, getCaptcha);
 router.post('/register', authLimiter, registerValidation, validate, register);
 router.post('/login', authLimiter, loginValidation, validate, login);
 router.post('/verify-otp', authLimiter, otpVerifyValidation, validate, verifyOtp);

@@ -76,6 +76,23 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Dedicated limiter for captcha generation.
+ * Generous to allow legitimate page reloads and refreshes without locking users out.
+ */
+export const captchaLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 60, // 60 per 5 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator,
+  validate: { xForwardedForHeader: false, default: true },
+  message: {
+    success: false,
+    message: 'Too many captcha requests. Please wait a moment.',
+  },
+});
+
+/**
  * Upload rate limiter.
  */
 export const uploadLimiter = rateLimit({
