@@ -102,6 +102,9 @@ export const downloadNotePdf = async (req, res, next) => {
       return res.status(404).send('PDF not found');
     }
     
+    // Safely increment download count in background
+    Note.findByIdAndUpdate(note._id, { $inc: { downloadCount: 1 } }).exec().catch(() => {});
+
     try {
       const response = await fetch(note.pdfUrl);
       if (!response.ok) throw new Error('Failed to fetch PDF from CDN');
@@ -149,10 +152,11 @@ export const downloadNotePdf = async (req, res, next) => {
         else if (contentType === 'image/webp') ext = 'webp';
         
         res.setHeader('Content-Disposition', `attachment; filename="${(note.title || 'document').replace(/[^a-zA-Z0-9.-]/g, '_')}.${ext}"`);
-        Readable.fromWeb(fbResponse.body).pipe(res);
+        const fileBuffer = await fbResponse.arrayBuffer();
+        return res.send(Buffer.from(fileBuffer));
       } catch (fbErr) {
         console.error('Fallback fetch error:', fbErr);
-        return res.status(500).send('Failed to download file');
+        return res.redirect(note.pdfUrl);
       }
     }
   } catch (error) {

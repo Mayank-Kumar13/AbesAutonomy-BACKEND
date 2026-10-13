@@ -29,7 +29,7 @@ router.get('/search', searchLimiter, searchNotesValidation, validate, searchNote
 router.get('/', listNotesValidation, validate, listNotes);
 router.get('/:id', noteIdValidation, validate, getNote);
 router.get('/:id/pdf', optionalAuth, noteIdValidation, validate, streamNotePdf);
-router.get('/:id/download', requireAuth, noteIdValidation, validate, downloadNotePdf);
+router.get('/:id/download', optionalAuth, noteIdValidation, validate, downloadNotePdf);
 router.post('/:id/view', viewCounterLimiter, noteIdValidation, validate, incrementViewCount);
 
 // ─── Admin routes ─────────────────────────────────────
