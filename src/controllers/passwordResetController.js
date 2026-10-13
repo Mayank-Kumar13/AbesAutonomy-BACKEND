@@ -4,6 +4,7 @@ import PasswordResetToken from '../models/PasswordResetToken.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import env from '../config/env.js';
 import { sendResetEmail } from '../services/emailService.js';
+import { verifyTurnstileToken } from '../utils/turnstile.js';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -13,8 +14,12 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
  */
 export const forgotPassword = async (req, res, next) => {
   try {
-    console.log('[DIAGNOSTIC] Forgot password controller reached');
-    const { email } = req.body;
+    const { email, turnstileToken } = req.body;
+    
+    const verification = await verifyTurnstileToken(turnstileToken, req.ip);
+    if (!verification.success) {
+      return ApiResponse.badRequest(res, verification.error || 'Security check failed. Please refresh and try again.');
+    }
     
     // Admin email should not be processed for password resets
     if (email.toLowerCase() === 'abesautonomy30@gmail.com') {

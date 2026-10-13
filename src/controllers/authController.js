@@ -8,6 +8,8 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import env from '../config/env.js';
+import { verifyTurnstileToken } from '../utils/turnstile.js';
+
 // Captcha has been disabled to prevent server CPU spikes and ensure smooth logins
 export const getCaptcha = (req, res) => {
   return ApiResponse.success(res, {
@@ -44,7 +46,12 @@ const issueOtp = async (userId, email, purpose) => {
  */
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, turnstileToken } = req.body;
+
+    const verification = await verifyTurnstileToken(turnstileToken, req.ip);
+    if (!verification.success) {
+      return ApiResponse.badRequest(res, verification.error || 'Security check failed. Please refresh and try again.');
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -73,8 +80,12 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    console.log('[DIAGNOSTIC] Login controller reached');
-    const { email, password } = req.body;
+    const { email, password, turnstileToken } = req.body;
+
+    const verification = await verifyTurnstileToken(turnstileToken, req.ip);
+    if (!verification.success) {
+      return ApiResponse.badRequest(res, verification.error || 'Security check failed. Please refresh and try again.');
+    }
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
