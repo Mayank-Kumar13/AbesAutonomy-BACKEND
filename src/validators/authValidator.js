@@ -13,10 +13,6 @@ export const registerValidation = [
   body('password')
     .notEmpty().withMessage('Password is required')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('captchaToken')
-    .notEmpty().withMessage('Captcha token is required'),
-  body('captchaValue')
-    .notEmpty().withMessage('Captcha value is required'),
 ];
 
 export const loginValidation = [
@@ -27,10 +23,6 @@ export const loginValidation = [
     .normalizeEmail(),
   body('password')
     .notEmpty().withMessage('Password is required'),
-  body('captchaToken')
-    .notEmpty().withMessage('Captcha token is required'),
-  body('captchaValue')
-    .notEmpty().withMessage('Captcha value is required'),
 ];
 
 export const updateProfileValidation = [

@@ -98,11 +98,7 @@ const issueOtp = async (userId, email, purpose) => {
  */
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, captchaToken, captchaValue } = req.body;
-
-    if (!verifyCaptcha(captchaToken, captchaValue)) {
-      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA.');
-    }
+    const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -132,11 +128,7 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     console.log('[DIAGNOSTIC] Login controller reached');
-    const { email, password, captchaToken, captchaValue } = req.body;
-
-    if (!verifyCaptcha(captchaToken, captchaValue)) {
-      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA.');
-    }
+    const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {

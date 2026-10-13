@@ -39,11 +39,7 @@ function verifyCaptcha(token, input) {
 export const forgotPassword = async (req, res, next) => {
   try {
     console.log('[DIAGNOSTIC] Forgot password controller reached');
-    const { email, captchaToken, captchaValue } = req.body;
-    
-    if (!verifyCaptcha(captchaToken, captchaValue)) {
-      return ApiResponse.badRequest(res, 'Invalid or expired CAPTCHA');
-    }
+    const { email } = req.body;
     
     // Admin email should not be processed for password resets
     if (email.toLowerCase() === 'abesautonomy30@gmail.com') {
