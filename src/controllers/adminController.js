@@ -7,6 +7,7 @@ import EmailLog from '../models/EmailLog.js';
 import EmailQuota from '../models/EmailQuota.js';
 import Visitor from '../models/Visitor.js';
 import SyntheticVisitor from '../models/SyntheticVisitor.js';
+import PdfViewLog from '../models/PdfViewLog.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -306,6 +307,147 @@ export const getEmailQuota = async (req, res, next) => {
       };
     }
     return ApiResponse.success(res, quota);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/top-readers
+ * Returns top reading students in specified timeframe (default: 24h),
+ * with top 3 readers podium, top 10 breakdown, total reading duration, and list of PDFs read.
+ */
+export const getTopReaders = async (req, res, next) => {
+  try {
+    const timeframe = req.query.timeframe || '24h';
+    let since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    if (timeframe === '7d') {
+      since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    } else if (timeframe === '30d') {
+      since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    } else if (timeframe === 'all') {
+      since = new Date(0);
+    }
+
+    const readersAgg = await PdfViewLog.aggregate([
+      { $match: { endTime: { $gte: since } } },
+      {
+        $addFields: {
+          effectiveDuration: {
+            $cond: [
+              { $gt: ['$durationMs', 0] },
+              '$durationMs',
+              { $max: [0, { $subtract: ['$endTime', '$startTime'] }] }
+            ]
+          }
+        }
+      },
+      // Group by user & individual PDF to aggregate time spent on each specific PDF
+      {
+        $group: {
+          _id: { userId: '$user', pdfTitle: '$pdfTitle' },
+          userName: { $first: '$userName' },
+          userEmail: { $first: '$userEmail' },
+          subject: { $first: '$subject' },
+          pdfId: { $first: '$pdfId' },
+          pdfDurationMs: { $sum: '$effectiveDuration' },
+          sessionsCount: { $sum: 1 },
+          lastReadAt: { $max: '$endTime' }
+        }
+      },
+      // Group by user to aggregate overall read time and collect all PDFs read
+      {
+        $group: {
+          _id: '$_id.userId',
+          userName: { $first: '$userName' },
+          userEmail: { $first: '$userEmail' },
+          totalReadTimeMs: { $sum: '$pdfDurationMs' },
+          totalPdfsCount: { $sum: 1 },
+          lastActiveAt: { $max: '$lastReadAt' },
+          pdfsRead: {
+            $push: {
+              pdfTitle: '$_id.pdfTitle',
+              subject: '$subject',
+              pdfId: '$pdfId',
+              durationMs: '$pdfDurationMs',
+              sessionsCount: '$sessionsCount',
+              lastReadAt: '$lastReadAt'
+            }
+          }
+        }
+      },
+      // Lookup actual User details from User collection
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userDoc'
+        }
+      },
+      {
+        $addFields: {
+          userObj: { $arrayElemAt: ['$userDoc', 0] }
+        }
+      },
+      // Exclude admin accounts to reflect genuine student readership
+      {
+        $match: {
+          $or: [
+            { 'userObj.role': { $exists: false } },
+            { 'userObj.role': { $ne: 'admin' } }
+          ]
+        }
+      },
+      {
+        $project: {
+          userId: '$_id',
+          name: { $ifNull: ['$userObj.name', '$userName'] },
+          email: { $ifNull: ['$userObj.email', '$userEmail'] },
+          profilePicture: '$userObj.profilePicture',
+          role: '$userObj.role',
+          totalReadTimeMs: 1,
+          totalPdfsCount: 1,
+          lastActiveAt: 1,
+          totalAllTimeWatchTimeMs: '$userObj.totalWatchTimeMs',
+          pdfsRead: 1
+        }
+      },
+      { $sort: { totalReadTimeMs: -1, lastActiveAt: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // Sort nested pdfsRead array by duration descending for each student
+    const formattedReaders = readersAgg.map((reader, index) => {
+      const sortedPdfs = (reader.pdfsRead || []).sort(
+        (a, b) => (b.durationMs || 0) - (a.durationMs || 0)
+      );
+      return {
+        rank: index + 1,
+        ...reader,
+        pdfsRead: sortedPdfs
+      };
+    });
+
+    const top3 = formattedReaders.slice(0, 3);
+    const top10 = formattedReaders.slice(0, 10);
+
+    // Summary calculation
+    const totalReadingTimeMs = formattedReaders.reduce((acc, r) => acc + (r.totalReadTimeMs || 0), 0);
+    const uniquePdfsSet = new Set();
+    formattedReaders.forEach(r => (r.pdfsRead || []).forEach(p => p.pdfTitle && uniquePdfsSet.add(p.pdfTitle)));
+
+    return ApiResponse.success(res, {
+      timeframe,
+      since,
+      summary: {
+        totalReadingTimeMs,
+        activeReadersCount: formattedReaders.length,
+        uniquePdfsReadCount: uniquePdfsSet.size
+      },
+      top3,
+      top10
+    });
   } catch (error) {
     next(error);
   }
