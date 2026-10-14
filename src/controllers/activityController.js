@@ -10,7 +10,8 @@ export const heartbeat = async (req, res, next) => {
     const intervalMs = Math.min(Math.max(parseInt(req.body.intervalMs, 10) || 20000, 1000), 60000);
 
     const update = { $set: { lastActiveAt: new Date() } };
-    if (req.user.role !== 'admin') {
+    // Only exclude master admin ID from watchtime accumulation
+    if (req.user?.email?.toLowerCase() !== 'abesautonomy30@gmail.com') {
       update.$inc = { totalWatchTimeMs: intervalMs };
     }
 

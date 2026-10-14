@@ -26,7 +26,7 @@ export const getStats = async (req, res, next) => {
     const totalVisitors = await Visitor.countDocuments();
 
     const watchAgg = await User.aggregate([
-      { $match: { role: { $ne: 'admin' } } },
+      { $match: { email: { $ne: 'abesautonomy30@gmail.com' } } },
       { $group: { _id: null, total: { $sum: '$totalWatchTimeMs' } } },
     ]);
     const totalWatchTimeMs = watchAgg[0]?.total || 0;
@@ -403,13 +403,10 @@ export const getTopReaders = async (req, res, next) => {
           userObj: { $arrayElemAt: ['$userDoc', 0] }
         }
       },
-      // Exclude admin accounts to reflect genuine student readership
+      // Exclude only master admin account from leaderboard
       {
         $match: {
-          $or: [
-            { 'userObj.role': { $exists: false } },
-            { 'userObj.role': { $ne: 'admin' } }
-          ]
+          'userObj.email': { $ne: 'abesautonomy30@gmail.com' }
         }
       },
       {
