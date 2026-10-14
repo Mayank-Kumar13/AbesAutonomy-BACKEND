@@ -40,13 +40,14 @@ export const pingLocation = async (req, res) => {
         }
 
         if (durationToAdd > 0) {
-          const threePointFiveMinsAgo = new Date(Date.now() - 3.5 * 60 * 1000);
+          const sessionWindow = new Date(Date.now() - 15 * 60 * 1000);
           
           const recentLog = await PdfViewLog.findOne({
             user: user._id,
             pdfTitle: pdfTitle,
-            endTime: { $gte: threePointFiveMinsAgo }
+            endTime: { $gte: sessionWindow }
           });
+
 
           if (recentLog) {
             recentLog.endTime = new Date();
