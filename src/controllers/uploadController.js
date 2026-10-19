@@ -119,14 +119,20 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       isPublished: req.user?.role === 'admin',
     };
 
-    // Synchronize to Supabase Storage as fallback (non-blocking if not configured)
-    if (isSupabaseConfigured()) {
+    // Synchronize to Supabase Storage if user opted in via checkbox
+    const shouldUploadToSupabase =
+      req.body.syncToSupabase === true ||
+      req.body.syncToSupabase === 'true' ||
+      req.body.uploadToSupabase === true ||
+      req.body.uploadToSupabase === 'true';
+
+    if (shouldUploadToSupabase && isSupabaseConfigured()) {
       try {
         const destinationPath = ikResult.filePath
           ? ikResult.filePath.replace(/^\/+/, '')
           : `notes/${sanitizedFilename}`;
         const sbResult = await uploadBuffer(
-          req.file.buffer,
+          finalBuffer,
           destinationPath,
           req.file.mimetype || 'application/pdf'
         );
