@@ -85,11 +85,8 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
 
     // Upload to ImageKit
     let ikResult;
+    let finalBuffer = req.file.buffer;
     try {
-      // Apply Watermark
-      let finalBuffer = req.file.buffer;
-
-
       const primaryBranch = Array.isArray(parsedBranch) ? parsedBranch[0] : (parsedBranch || 'general');
       const folder = `/notes/${primaryBranch.toLowerCase()}/${req.body.subject.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}`;
       ikResult = await uploadPdf(finalBuffer, sanitizedFilename, folder);
