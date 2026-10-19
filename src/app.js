@@ -160,12 +160,19 @@ app.use((req, res, next) => {
 app.use('/api', apiLimiter);
 
 // ─── Health check ────────────────────────────────────
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const { isSupabaseConfigured, getSupabase } = await import('./config/supabase.js');
   res.json({
     success: true,
     message: 'ABES Autonomy API is running',
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
+    supabase: {
+      configured: isSupabaseConfigured(),
+      hasUrl: Boolean(env.SUPABASE_URL),
+      hasServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+      hasPublishableKey: Boolean(env.SUPABASE_PUBLISHABLE_KEY),
+    },
   });
 });
 
