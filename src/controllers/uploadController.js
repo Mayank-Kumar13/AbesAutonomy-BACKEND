@@ -119,12 +119,12 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       isPublished: req.user?.role === 'admin',
     };
 
-    // Synchronize to Supabase Storage if user opted in via checkbox
+    // Synchronize to Supabase Storage (active by default or via checkbox)
     const shouldUploadToSupabase =
-      req.body.syncToSupabase === true ||
-      req.body.syncToSupabase === 'true' ||
-      req.body.uploadToSupabase === true ||
-      req.body.uploadToSupabase === 'true';
+      req.body.syncToSupabase !== false &&
+      req.body.syncToSupabase !== 'false' &&
+      req.body.uploadToSupabase !== false &&
+      req.body.uploadToSupabase !== 'false';
 
     if (shouldUploadToSupabase && isSupabaseConfigured()) {
       try {
@@ -134,14 +134,17 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
         const sbResult = await uploadBuffer(
           finalBuffer,
           destinationPath,
-          req.file.mimetype || 'application/pdf'
+          req.file.mimetype || 'application/pdf',
+          true
         );
         noteData.supabasePath = sbResult.path;
         noteData.supabaseUrl = sbResult.url;
         console.log(`✅ Note synchronized to Supabase Storage: ${sbResult.path}`);
       } catch (sbError) {
-        console.warn(`⚠️ Supabase Storage sync failed (primary upload still succeeded): ${sbError.message}`);
+        console.error(`❌ Supabase Storage sync failed: ${sbError.message}`);
       }
+    } else {
+      console.log(`ℹ️ Supabase sync skipped: shouldUpload=${shouldUploadToSupabase}, configured=${isSupabaseConfigured()}`);
     }
 
 
