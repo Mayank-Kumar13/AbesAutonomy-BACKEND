@@ -2,6 +2,7 @@ import multer from 'multer';
 import Note from '../models/Note.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { uploadPdf, deleteFile } from '../services/imagekitService.js';
+import { uploadBuffer, syncImageKitFileToSupabase, isSupabaseConfigured } from '../services/supabaseStorageService.js';
 import { logAdminActivity } from '../utils/logger.js';
 import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import fs from 'fs';
@@ -117,6 +118,26 @@ export const uploadPdfAndCreateNote = async (req, res, next) => {
       uploadedBy: req.user?._id,
       isPublished: req.user?.role === 'admin',
     };
+
+    // Synchronize to Supabase Storage as fallback (non-blocking if not configured)
+    if (isSupabaseConfigured()) {
+      try {
+        const destinationPath = ikResult.filePath
+          ? ikResult.filePath.replace(/^\/+/, '')
+          : `notes/${sanitizedFilename}`;
+        const sbResult = await uploadBuffer(
+          req.file.buffer,
+          destinationPath,
+          req.file.mimetype || 'application/pdf'
+        );
+        noteData.supabasePath = sbResult.path;
+        noteData.supabaseUrl = sbResult.url;
+        console.log(`✅ Note synchronized to Supabase Storage: ${sbResult.path}`);
+      } catch (sbError) {
+        console.warn(`⚠️ Supabase Storage sync failed (primary upload still succeeded): ${sbError.message}`);
+      }
+    }
+
 
     const note = await Note.create(noteData);
 
@@ -235,3 +256,72 @@ export const deleteImageKitFile = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/upload/sync-to-supabase
+ * Safely copy all existing ImageKit files into Supabase Storage.
+ * Does not overwrite or delete existing files.
+ */
+export const syncLibraryToSupabase = async (req, res, next) => {
+  try {
+    if (!isSupabaseConfigured()) {
+      return ApiResponse.badRequest(res, 'Supabase Storage is not configured in backend environment (.env).');
+    }
+
+    const notes = await Note.find({ pdfUrl: { $exists: true, $ne: '' } });
+    let syncedCount = 0;
+    let alreadyExistedCount = 0;
+    let failedCount = 0;
+    const failures = [];
+
+    for (const note of notes) {
+      try {
+        const targetPath = note.supabasePath || note.imagekitFilePath || '';
+        const result = await syncImageKitFileToSupabase(note.pdfUrl, targetPath);
+        if (result.success) {
+          if (result.alreadyExisted) {
+            alreadyExistedCount++;
+          } else {
+            syncedCount++;
+          }
+
+          if (!note.supabasePath || !note.supabaseUrl) {
+            note.supabasePath = result.path;
+            note.supabaseUrl = result.url;
+            await note.save();
+          }
+        }
+      } catch (err) {
+        failedCount++;
+        failures.push({
+          noteId: note._id,
+          title: note.title,
+          error: err.message,
+        });
+      }
+    }
+
+    await logAdminActivity(req, 'SYNC_SUPABASE', `Synced ImageKit files to Supabase: ${syncedCount} new, ${alreadyExistedCount} existed`, {
+      role: req.user.role,
+      totalNotes: notes.length,
+      syncedCount,
+      alreadyExistedCount,
+      failedCount,
+    });
+
+    return ApiResponse.success(
+      res,
+      {
+        totalNotes: notes.length,
+        syncedCount,
+        alreadyExistedCount,
+        failedCount,
+        failures: failures.slice(0, 10),
+      },
+      `Supabase synchronization finished: ${syncedCount} synced, ${alreadyExistedCount} already existed, ${failedCount} failed.`
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+

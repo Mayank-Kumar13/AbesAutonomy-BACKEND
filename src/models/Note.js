@@ -87,6 +87,16 @@ const noteSchema = new mongoose.Schema(
       default: '',
     },
 
+    // ─── Supabase Storage fields (Fallback & Sync) ──
+    supabasePath: {
+      type: String,
+      default: '',
+    },
+    supabaseUrl: {
+      type: String,
+      default: '',
+    },
+
     // ─── Metadata ───────────────────────────────────
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

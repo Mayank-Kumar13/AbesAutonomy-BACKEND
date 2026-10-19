@@ -4,6 +4,7 @@ import {
   uploadPdfAndCreateNote,
   registerExistingPdf,
   deleteImageKitFile,
+  syncLibraryToSupabase,
 } from '../controllers/uploadController.js';
 import { requireAuth, requireAdminOrCoordinator, requireAdmin } from '../middleware/auth.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
@@ -19,4 +20,8 @@ router.post('/register', requireAuth, requireAdminOrCoordinator, registerExistin
 // Delete a file from ImageKit
 router.delete('/:fileId', requireAuth, requireAdmin, deleteImageKitFile);
 
+// Synchronize all existing ImageKit files to Supabase Storage (Admin only)
+router.post('/sync-to-supabase', requireAuth, requireAdmin, syncLibraryToSupabase);
+
 export default router;
+

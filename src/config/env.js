@@ -53,6 +53,10 @@ const env = {
   CLOUDFLARE_TURNSTILE_SECRET_KEY: (
     process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
   )?.trim() || '',
+
+  SUPABASE_URL: process.env.SUPABASE_URL?.trim() || '',
+  SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY?.trim() || '',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '',
 };
 
-export default env;
+export default env;
