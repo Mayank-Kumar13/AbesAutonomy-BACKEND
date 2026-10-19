@@ -178,7 +178,10 @@ export const syncImageKitFileToSupabase = async (imagekitUrl, targetFilePath = '
   };
 };
 
+export { isSupabaseConfigured };
+
 export default {
+  isSupabaseConfigured,
   mapImageKitUrlToSupabasePath,
   uploadBuffer,
   downloadBuffer,
