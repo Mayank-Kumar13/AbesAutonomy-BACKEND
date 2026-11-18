@@ -83,12 +83,25 @@ export const evaluateNoteAccess = async (user, note) => {
   }
 
   // 5. Free PDF Access System (5 free documents)
+  const currentCount = user.freePdfAccessCount || 0;
+
+  // Once all 5 free document accesses are exhausted, all non-PYQ documents are locked
+  if (currentCount >= 5) {
+    return {
+      allowed: false,
+      reason: 'limit_reached',
+      code: 'PREMIUM_REQUIRED',
+      remaining: 0,
+      count: currentCount,
+      message: 'You have used all 5 free document accesses. Upgrade to ABES Autonomy Premium for unlimited access to all study materials.',
+    };
+  }
+
   const noteIdStr = note._id.toString();
   const accessedIds = (user.freePdfAccessedIds || []).map((id) => id.toString());
 
-  // Repeated access to an already unlocked note does NOT count again
+  // Repeated access to an already unlocked note within the 5 allowance does NOT count again
   if (accessedIds.includes(noteIdStr)) {
-    const currentCount = user.freePdfAccessCount || 0;
     return {
       allowed: true,
       reason: 'free_allowance_repeat',
@@ -100,26 +113,13 @@ export const evaluateNoteAccess = async (user, note) => {
   }
 
   // Accessing a new document under free allowance
-  const currentCount = user.freePdfAccessCount || 0;
-  if (currentCount < 5) {
-    return {
-      allowed: true,
-      reason: 'free_allowance_new',
-      consumeSlot: true,
-      remaining: 5 - (currentCount + 1),
-      count: currentCount + 1,
-      message: `Access granted (${currentCount + 1}/5 free document accesses used).`,
-    };
-  }
-
-  // Free quota exhausted — 6th or higher requires Premium
   return {
-    allowed: false,
-    reason: 'limit_reached',
-    code: 'PREMIUM_REQUIRED',
-    remaining: 0,
-    count: currentCount,
-    message: 'You have used all 5 free document accesses. Upgrade to ABES Autonomy Premium for unlimited access to all study materials.',
+    allowed: true,
+    reason: 'free_allowance_new',
+    consumeSlot: true,
+    remaining: 5 - (currentCount + 1),
+    count: currentCount + 1,
+    message: `Access granted (${currentCount + 1}/5 free document accesses used).`,
   };
 };
 
