@@ -128,8 +128,22 @@ export const streamNotePdf = async (req, res, next) => {
     // 1. Try Primary provider (ImageKit via note.pdfUrl)
     if (note.pdfUrl) {
       try {
-        const primaryRes = await fetch(note.pdfUrl);
-        if (primaryRes.ok) {
+        const fetchHeaders = {};
+        if (req.headers.range) {
+          fetchHeaders['Range'] = req.headers.range;
+        }
+        const primaryRes = await fetch(note.pdfUrl, { headers: fetchHeaders });
+        if (primaryRes.ok || primaryRes.status === 206) {
+          if (primaryRes.status === 206) {
+            res.status(206);
+            if (primaryRes.headers.get('content-range')) {
+              res.setHeader('Content-Range', primaryRes.headers.get('content-range'));
+            }
+          }
+          if (primaryRes.headers.get('content-length')) {
+            res.setHeader('Content-Length', primaryRes.headers.get('content-length'));
+          }
+          res.setHeader('Accept-Ranges', 'bytes');
           contentType = primaryRes.headers.get('content-type') || 'application/pdf';
           streamBody = Readable.fromWeb(primaryRes.body);
         } else {
@@ -147,6 +161,8 @@ export const streamNotePdf = async (req, res, next) => {
         try {
           const { buffer, contentType: sbType } = await downloadBuffer(sbPath);
           contentType = sbType || 'application/pdf';
+          res.setHeader('Content-Length', buffer.length);
+          res.setHeader('Accept-Ranges', 'bytes');
           streamBody = Readable.from(buffer);
           console.info(`[StreamNotePdf] Successfully streaming from Supabase Storage fallback: ${sbPath}`);
         } catch (sbErr) {
