@@ -6,6 +6,8 @@ import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { downloadBuffer, isSupabaseConfigured, mapImageKitUrlToSupabasePath } from '../services/supabaseStorageService.js';
 import { logAdminActivity } from '../utils/logger.js';
+import { evaluateNoteAccess, recordPdfAccess } from '../middleware/accessControl.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -54,6 +56,10 @@ export const getNote = async (req, res, next) => {
       return ApiResponse.notFound(res, 'Note not found');
     }
 
+    if (note.resourceType !== 'pyq') {
+      note.pdfUrl = `/api/notes/${note._id}/pdf`;
+    }
+
     return ApiResponse.success(res, note);
   } catch (error) {
     next(error);
@@ -61,15 +67,60 @@ export const getNote = async (req, res, next) => {
 };
 
 /**
+ * GET /api/notes/:id/access
+ * Pre-flight check whether the current user has access to view/download this note.
+ */
+export const checkNoteAccessStatus = async (req, res, next) => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note) {
+      return ApiResponse.notFound(res, 'Note not found');
+    }
+
+    const access = await evaluateNoteAccess(req.user, note);
+    return ApiResponse.success(res, {
+      allowed: access.allowed,
+      reason: access.reason,
+      code: access.code || null,
+      message: access.message,
+      remaining: access.remaining !== undefined ? access.remaining : (req.user ? Math.max(0, 5 - (req.user.freePdfAccessCount || 0)) : 5),
+      count: access.count !== undefined ? access.count : (req.user?.freePdfAccessCount || 0),
+      isPremium: req.user?.isPremium || false,
+      isSuperAdmin: isMainSuperAdmin(req.user),
+      resourceType: note.resourceType,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/notes/:id/pdf
- * Stream the clean PDF for online viewing.
+ * Stream the clean PDF for online viewing with centralized access evaluation.
  */
 export const streamNotePdf = async (req, res, next) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note || (!note.pdfUrl && !note.supabaseUrl && !note.supabasePath)) {
-      return res.status(404).send('PDF not found');
+      return res.status(404).json({ success: false, message: 'PDF not found' });
     }
+
+    // Evaluate access permissions
+    const access = await evaluateNoteAccess(req.user, note);
+    if (!access.allowed) {
+      await recordPdfAccess(req, req.user, note, access);
+      return res.status(403).json({
+        success: false,
+        code: access.code || 'ACCESS_DENIED',
+        message: access.message,
+        remaining: access.remaining,
+        count: access.count,
+        isPremium: req.user?.isPremium || false,
+      });
+    }
+
+    // Access authorized - record access log & update free counter if new document
+    await recordPdfAccess(req, req.user, note, access);
 
     let streamBody = null;
     let contentType = 'application/pdf';
@@ -105,7 +156,7 @@ export const streamNotePdf = async (req, res, next) => {
     }
 
     if (!streamBody) {
-      return res.status(502).send('Unable to retrieve document from primary or backup storage.');
+      return res.status(502).json({ success: false, message: 'Unable to retrieve document from primary or backup storage.' });
     }
 
     res.setHeader('Content-Type', contentType);
@@ -123,15 +174,31 @@ export const streamNotePdf = async (req, res, next) => {
 
 /**
  * GET /api/notes/:id/download
- * Download a dynamically watermarked PDF.
+ * Download a dynamically watermarked PDF with centralized access evaluation.
  */
 export const downloadNotePdf = async (req, res, next) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note || (!note.pdfUrl && !note.supabaseUrl && !note.supabasePath)) {
-      return res.status(404).send('PDF not found');
+      return res.status(404).json({ success: false, message: 'PDF not found' });
     }
 
+    // Evaluate access permissions
+    const access = await evaluateNoteAccess(req.user, note);
+    if (!access.allowed) {
+      await recordPdfAccess(req, req.user, note, access);
+      return res.status(403).json({
+        success: false,
+        code: access.code || 'ACCESS_DENIED',
+        message: access.message,
+        remaining: access.remaining,
+        count: access.count,
+        isPremium: req.user?.isPremium || false,
+      });
+    }
+
+    // Access authorized - record access log & update free counter if new document
+    await recordPdfAccess(req, req.user, note, access);
     // Safely increment download count in background
     Note.findByIdAndUpdate(note._id, { $inc: { downloadCount: 1 } }).exec().catch(() => {});
 

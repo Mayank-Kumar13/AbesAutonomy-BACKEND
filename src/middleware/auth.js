@@ -23,6 +23,10 @@ export const requireAuth = async (req, res, next) => {
       token = req.cookies.token;
     }
 
+    if (!token && req.query && req.query.token) {
+      token = req.query.token;
+    }
+
     if (!token) {
       return ApiResponse.unauthorized(res, 'Access denied. No token provided.');
     }
@@ -63,6 +67,10 @@ export const optionalAuth = async (req, res, next) => {
     
     if (!token && req.cookies && req.cookies.token) {
       token = req.cookies.token;
+    }
+
+    if (!token && req.query && req.query.token) {
+      token = req.query.token;
     }
 
     if (token) {

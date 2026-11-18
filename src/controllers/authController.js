@@ -9,6 +9,8 @@ import { generateToken } from '../middleware/auth.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import env from '../config/env.js';
 import { verifyTurnstileToken } from '../utils/turnstile.js';
+import { validateUserSubscription } from '../middleware/accessControl.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 
 // Captcha has been disabled to prevent server CPU spikes and ensure smooth logins
 export const getCaptcha = (req, res) => {
@@ -269,9 +271,25 @@ export const resendOtp = async (req, res, next) => {
  */
 export const getProfile = async (req, res, next) => {
   try {
+    // Validate subscription status on-the-fly
+    await validateUserSubscription(req.user);
+
     const userJson = req.user.toSafeJSON();
     const review = await Review.findOne({ user: req.user._id });
     userJson.hasReviewed = !!review;
+    userJson.isSuperAdmin = isMainSuperAdmin(req.user);
+
+    const freeCount = req.user.freePdfAccessCount || 0;
+    userJson.freePdfAccessCount = freeCount;
+    userJson.freePdfRemaining = Math.max(0, 5 - freeCount);
+
+    if (req.user.isPremium && req.user.premiumExpiryDate) {
+      const diffMs = new Date(req.user.premiumExpiryDate) - new Date();
+      userJson.daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    } else {
+      userJson.daysRemaining = 0;
+    }
+
     return ApiResponse.success(res, userJson);
   } catch (error) {
     next(error);

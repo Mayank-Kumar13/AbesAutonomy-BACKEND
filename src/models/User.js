@@ -105,11 +105,52 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // ─── Premium Subscription System ────────────────────
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    premiumPlan: {
+      type: String,
+      enum: ['premium_2_months', 'premium_4_months', null],
+      default: null,
+    },
+    premiumStartDate: {
+      type: Date,
+      default: null,
+    },
+    premiumExpiryDate: {
+      type: Date,
+      default: null,
+    },
+    premiumStatus: {
+      type: String,
+      enum: ['NONE', 'ACTIVE', 'EXPIRED'],
+      default: 'NONE',
+    },
+
+    // ─── Free PDF Access Tracking (5 Free Rule) ─────────
+    freePdfAccessCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    freePdfAccessedIds: {
+      type: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Note',
+      }],
+      default: [],
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Indexes for premium checks
+userSchema.index({ isPremium: 1, premiumExpiryDate: 1 });
 
 // Prevent duplicate OAuth identities
 userSchema.index(

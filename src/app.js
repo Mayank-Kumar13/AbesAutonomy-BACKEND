@@ -121,6 +121,9 @@ app.use(
 app.use(
   express.json({
     limit: '10mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
   })
 );
 
@@ -197,7 +200,14 @@ app.use('/api/subjects', subjectRoutes);
 app.use('/api/credits', creditsRoutes);
 
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import adminPremiumRoutes from './routes/adminPremiumRoutes.js';
+
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/admin/premium', adminPremiumRoutes);
 
 // ─── 404 handler ─────────────────────────────────────
 app.use('/api/{*path}', (req, res) => {

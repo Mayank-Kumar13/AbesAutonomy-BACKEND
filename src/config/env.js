@@ -54,9 +54,19 @@ const env = {
     process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
   )?.trim() || '',
 
+  // ─── Supabase Backup Storage ────────────────────────
   SUPABASE_URL: (process.env.SUPABASE_URL || 'https://optjhlvqgwupjmwtsqoe.supabase.co').trim(),
   SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY?.trim() || '',
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '',
+
+  // ─── Razorpay Payment Gateway ───────────────────────
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID?.trim() || '',
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET?.trim() || '',
+  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || '',
+
+  // ─── Super Admin Access Exemption ───────────────────
+  SUPER_ADMIN_ID: process.env.SUPER_ADMIN_ID?.trim() || '',
+  SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL?.trim() || 'abesautonomy30@gmail.com',
 };
 
-export default env;
+export default env;

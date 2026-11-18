@@ -9,6 +9,7 @@ import {
   incrementViewCount,
   streamNotePdf,
   downloadNotePdf,
+  checkNoteAccessStatus,
 } from '../controllers/noteController.js';
 import { requireAuth, requireAdminOrCoordinator, requireAdmin, optionalAuth } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
@@ -28,6 +29,7 @@ const router = Router();
 router.get('/search', searchLimiter, searchNotesValidation, validate, searchNotesHandler);
 router.get('/', listNotesValidation, validate, listNotes);
 router.get('/:id', noteIdValidation, validate, getNote);
+router.get('/:id/access', optionalAuth, noteIdValidation, validate, checkNoteAccessStatus);
 router.get('/:id/pdf', optionalAuth, noteIdValidation, validate, streamNotePdf);
 router.get('/:id/download', optionalAuth, noteIdValidation, validate, downloadNotePdf);
 router.post('/:id/view', viewCounterLimiter, noteIdValidation, validate, incrementViewCount);

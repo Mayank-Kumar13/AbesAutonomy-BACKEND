@@ -63,7 +63,7 @@ export const getFilteredNotes = async (query) => {
     sortObj[sortField] = 1;
   }
 
-  const [notes, total] = await Promise.all([
+  const [rawNotes, total] = await Promise.all([
     Note.find(filter)
       .select('-imagekitFileId -imagekitFilePath')
       .sort(sortObj)
@@ -73,6 +73,17 @@ export const getFilteredNotes = async (query) => {
       .lean(),
     Note.countDocuments(filter),
   ]);
+
+  // Protect raw storage URLs for non-PYQ academic materials
+  const notes = rawNotes.map((note) => {
+    if (note.resourceType === 'pyq') {
+      return note;
+    }
+    return {
+      ...note,
+      pdfUrl: `/api/notes/${note._id}/pdf`,
+    };
+  });
 
   return { notes, total, page, limit };
 };
@@ -91,7 +102,7 @@ export const searchNotes = async (query) => {
     isPublished: true,
   };
 
-  const [notes, total] = await Promise.all([
+  const [rawNotes, total] = await Promise.all([
     Note.find(filter, { score: { $meta: 'textScore' } })
       .select('-imagekitFileId -imagekitFilePath')
       .sort({ score: { $meta: 'textScore' } })
@@ -100,6 +111,16 @@ export const searchNotes = async (query) => {
       .lean(),
     Note.countDocuments(filter),
   ]);
+
+  const notes = rawNotes.map((note) => {
+    if (note.resourceType === 'pyq') {
+      return note;
+    }
+    return {
+      ...note,
+      pdfUrl: `/api/notes/${note._id}/pdf`,
+    };
+  });
 
   return { notes, total, page, limit };
 };
