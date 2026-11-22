@@ -86,6 +86,17 @@ The API will be available at `http://localhost:5000/api`
 | GET | `/api/meta/branches` | Distinct branches |
 | GET | `/api/meta/stats` | Platform statistics (admin only) |
 
+### AI PDF chat (Premium by default)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/ai/pdf-chat/:noteId/status` | Warms the PDF text cache; tells the UI whether chat is possible |
+| POST | `/api/ai/pdf-chat` | `{ noteId, message, history }` → answer based **only** on that PDF |
+
+How it works: the PDF's text is extracted once and cached in MongoDB (`NoteText`). Each question
+retrieves only the relevant passages (BM25), and a strict prompt restricts the model to them. Requests
+are spread across the providers/keys in `.env` with automatic failover and cooldowns
+(`src/services/ai/`). Scanned / handwritten PDFs have no text layer and return `NO_TEXT_LAYER`.
+
 ## Environment Variables
 
 | Variable | Required | Description |

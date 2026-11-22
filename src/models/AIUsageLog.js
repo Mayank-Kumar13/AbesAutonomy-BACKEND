@@ -38,6 +38,20 @@ const aiUsageLogSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Set by AI features that call a real model (e.g. pdf_chat)
+    provider: {
+      type: String,
+      default: '',
+    },
+    model: {
+      type: String,
+      default: '',
+    },
+    noteId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Note',
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -45,6 +59,8 @@ const aiUsageLogSchema = new mongoose.Schema(
 );
 
 aiUsageLogSchema.index({ createdAt: -1 });
+// Used for per-user daily limits
+aiUsageLogSchema.index({ userId: 1, feature: 1, createdAt: -1 });
 
 const AIUsageLog = mongoose.model('AIUsageLog', aiUsageLogSchema);
 export default AIUsageLog;

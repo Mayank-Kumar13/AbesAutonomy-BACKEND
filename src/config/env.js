@@ -64,6 +64,23 @@ const env = {
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET?.trim() || '',
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || '',
 
+  // ─── AI (PDF chat) ──────────────────────────────────
+  // Comma-separated lists. Provider is enabled only if it has >=1 key and >=1 model.
+  AI_PROVIDER_ORDER: process.env.AI_PROVIDER_ORDER?.trim() || 'gemini,groq,openrouter',
+  AI_STRATEGY: process.env.AI_STRATEGY?.trim() === 'failover' ? 'failover' : 'rotate',
+  GEMINI_API_KEYS: (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY)?.trim() || '',
+  GEMINI_MODELS: process.env.GEMINI_MODELS?.trim() || '',
+  GROQ_API_KEYS: (process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY)?.trim() || '',
+  GROQ_MODELS: process.env.GROQ_MODELS?.trim() || '',
+  OPENROUTER_API_KEYS: (process.env.OPENROUTER_API_KEYS || process.env.OPENROUTER_API_KEY)?.trim() || '',
+  OPENROUTER_MODELS: process.env.OPENROUTER_MODELS?.trim() || '',
+  AI_REQUEST_TIMEOUT_MS: parseInt(process.env.AI_REQUEST_TIMEOUT_MS, 10) || 15000,
+  AI_CONTEXT_CHARS: parseInt(process.env.AI_CONTEXT_CHARS, 10) || 7000,
+  AI_DAILY_LIMIT_PER_USER: parseInt(process.env.AI_DAILY_LIMIT_PER_USER, 10) || 40,
+  AI_PER_MINUTE_LIMIT: parseInt(process.env.AI_PER_MINUTE_LIMIT, 10) || 6,
+  // true (default) = same rule as the other AI endpoints: Premium only. Set to "false" for all logged-in users.
+  AI_PDF_CHAT_PREMIUM_ONLY: process.env.AI_PDF_CHAT_PREMIUM_ONLY?.trim().toLowerCase() !== 'false',
+
   // ─── Super Admin Access Exemption ───────────────────
   SUPER_ADMIN_ID: process.env.SUPER_ADMIN_ID?.trim() || '',
   SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL?.trim() || 'abesautonomy30@gmail.com',
