@@ -188,6 +188,9 @@ export const callOpenAICompatible = async ({
     max_tokens: maxTokens,
     stream: false,
   };
+  // GPT-OSS on Groq is a reasoning model: by default it can spend most of the token budget
+  // "thinking" and return little or no answer. Low effort keeps answers fast and cheap.
+  if (/groq\.com/.test(baseUrl) && /^openai\/gpt-oss/.test(model)) body.reasoning_effort = 'low';
 
   let res;
   try {
@@ -256,13 +259,13 @@ export const loadProvidersFromConfig = (cfg) => {
     gemini: {
       type: 'gemini',
       keys: splitList(cfg.GEMINI_API_KEYS || cfg.GEMINI_API_KEY),
-      models: splitList(cfg.GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite'),
+      models: splitList(cfg.GEMINI_MODELS || 'gemini-3.8-flash,gemini-3.5-flash-lite'),
     },
     groq: {
       type: 'openai',
       baseUrl: 'https://api.groq.com/openai/v1',
       keys: splitList(cfg.GROQ_API_KEYS || cfg.GROQ_API_KEY),
-      models: splitList(cfg.GROQ_MODELS || 'llama-3.3-70b-versatile,llama-3.1-8b-instant'),
+      models: splitList(cfg.GROQ_MODELS || 'openai/gpt-oss-120b,openai/gpt-oss-20b'),
     },
     openrouter: {
       type: 'openai',

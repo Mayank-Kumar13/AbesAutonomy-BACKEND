@@ -207,7 +207,7 @@ export const chatWithPdf = async (req, res, next) => {
     const result = await llm.generate({
       system,
       messages: [...history, { role: 'user', content: question }],
-      maxTokens: 700,
+      maxTokens: 1500,
       temperature: 0.2,
     });
 
