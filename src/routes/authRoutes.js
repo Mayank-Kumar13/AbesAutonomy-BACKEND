@@ -7,12 +7,13 @@ import {
   verifyOtp,
   resendOtp,
   getCaptcha,
+  logout,
 } from '../controllers/authController.js';
 import {
   forgotPassword,
   resetPassword,
 } from '../controllers/passwordResetController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
 import {
   registerValidation,
@@ -43,6 +44,7 @@ router.post('/forgot-password', forgotPasswordLimiter, forgotPasswordValidation,
 router.post('/reset-password', authLimiter, resetPasswordValidation, validate, resetPassword);
 
 // ─── Protected routes ─────────────────────────────────
+router.post('/logout', optionalAuth, logout);
 router.get('/profile', requireAuth, getProfile);
 router.get('/me', requireAuth, getProfile); // Alias to support /auth/me constraint
 router.patch('/profile', requireAuth, updateProfileValidation, validate, updateProfile);

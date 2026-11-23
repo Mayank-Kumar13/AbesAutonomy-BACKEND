@@ -130,7 +130,7 @@ const userSchema = new mongoose.Schema(
       default: 'NONE',
     },
 
-    // ─── Free PDF Access Tracking (5 Free Rule) ─────────
+    // ─── Free PDF Access Tracking (3 Free Rule) ─────────
     freePdfAccessCount: {
       type: Number,
       default: 0,
@@ -142,6 +142,12 @@ const userSchema = new mongoose.Schema(
         ref: 'Note',
       }],
       default: [],
+    },
+
+    // ─── Single Active Device Session ───────────────────
+    currentSessionId: {
+      type: String,
+      default: null,
     },
   },
   {

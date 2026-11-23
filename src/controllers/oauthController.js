@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
 import env from '../config/env.js';
 import { generateToken } from '../middleware/auth.js';
@@ -38,9 +39,13 @@ const findOrCreateOAuthUser = async ({ provider, providerId, email, name, pictur
 };
 
 const recordLogin = async (user) => {
+  const sessionId = crypto.randomUUID();
+  user.currentSessionId = sessionId;
   user.lastLogin = new Date();
+  user.lastActiveAt = new Date();
   user.loginCount = (user.loginCount || 0) + 1;
   await user.save();
+  return sessionId;
 };
 
 /**
@@ -68,9 +73,9 @@ export const googleCallback = async (req, res) => {
       picture: profile.picture,
     });
 
-    await recordLogin(user);
+    const sessionId = await recordLogin(user);
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -108,9 +113,9 @@ export const googleCallbackPost = async (req, res) => {
       picture: profile.picture,
     });
 
-    await recordLogin(user);
+    const sessionId = await recordLogin(user);
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -151,9 +156,9 @@ export const githubCallback = async (req, res) => {
       picture: profile.avatar_url,
     });
 
-    await recordLogin(user);
+    const sessionId = await recordLogin(user);
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     res.cookie('token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -188,9 +193,9 @@ export const githubCallbackPost = async (req, res) => {
       picture: profile.avatar_url,
     });
 
-    await recordLogin(user);
+    const sessionId = await recordLogin(user);
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',

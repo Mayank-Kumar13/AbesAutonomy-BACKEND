@@ -125,7 +125,7 @@ export const getPremiumUsers = async (req, res, next) => {
         isSuperAdmin: isMainSuperAdmin(u),
         isActivelyPremium: isSubActive,
         daysRemaining,
-        freeRemaining: Math.max(0, 5 - (u.freePdfAccessCount || 0)),
+        freeRemaining: Math.max(0, 3 - (u.freePdfAccessCount || 0)),
       };
     });
 

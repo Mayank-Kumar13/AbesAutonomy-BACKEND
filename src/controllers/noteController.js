@@ -6,7 +6,7 @@ import { getFilteredNotes, searchNotes } from '../services/noteService.js';
 import { deleteFile } from '../services/imagekitService.js';
 import { downloadBuffer, isSupabaseConfigured, mapImageKitUrlToSupabasePath } from '../services/supabaseStorageService.js';
 import { logAdminActivity } from '../utils/logger.js';
-import { evaluateNoteAccess, recordPdfAccess } from '../middleware/accessControl.js';
+import { evaluateNoteAccess, recordPdfAccess, validateUserSubscription } from '../middleware/accessControl.js';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import fs from 'fs';
 import path from 'path';
@@ -83,7 +83,7 @@ export const checkNoteAccessStatus = async (req, res, next) => {
       reason: access.reason,
       code: access.code || null,
       message: access.message,
-      remaining: access.remaining !== undefined ? access.remaining : (req.user ? Math.max(0, 5 - (req.user.freePdfAccessCount || 0)) : 5),
+      remaining: access.remaining !== undefined ? access.remaining : (req.user ? Math.max(0, 3 - (req.user.freePdfAccessCount || 0)) : 3),
       count: access.count !== undefined ? access.count : (req.user?.freePdfAccessCount || 0),
       isPremium: req.user?.isPremium || false,
       isSuperAdmin: isMainSuperAdmin(req.user),
@@ -188,15 +188,48 @@ export const streamNotePdf = async (req, res, next) => {
   }
 };
 
+let cachedLogoBuffer = null;
+const getLogoBuffer = () => {
+  if (!cachedLogoBuffer) {
+    const candidates = [
+      path.resolve(__dirname, '../../logo.png'),
+      path.resolve(process.cwd(), 'logo.png'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        try {
+          cachedLogoBuffer = fs.readFileSync(p);
+          break;
+        } catch {}
+      }
+    }
+  }
+  return cachedLogoBuffer;
+};
+
 /**
  * GET /api/notes/:id/download
  * Download a dynamically watermarked PDF with centralized access evaluation.
+ * STRICT POLICY: Downloads are strictly reserved for active Premium members and Super Admin.
  */
 export const downloadNotePdf = async (req, res, next) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note || (!note.pdfUrl && !note.supabaseUrl && !note.supabasePath)) {
       return res.status(404).json({ success: false, message: 'PDF not found' });
+    }
+
+    // 1. PDF Downloads are strictly reserved for Premium members (and Main Super Admin)
+    const isSuper = isMainSuperAdmin(req.user);
+    const isPremium = req.user ? await validateUserSubscription(req.user) : false;
+
+    if (!isSuper && !isPremium) {
+      return res.status(403).json({
+        success: false,
+        code: 'PREMIUM_DOWNLOAD_REQUIRED',
+        message: 'PDF downloads are exclusive to Premium subscribers. Upgrade to ABES Autonomy Premium to download and save documents offline.',
+        isPremium: false,
+      });
     }
 
     // Evaluate access permissions
@@ -255,23 +288,61 @@ export const downloadNotePdf = async (req, res, next) => {
       return res.status(502).send('Failed to fetch document for download from both storage providers.');
     }
 
-    // Apply dynamic watermark if it's a PDF
+    // Apply dynamic watermark with official ABES Autonomy logo on every page
     try {
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const pages = pdfDoc.getPages();
+
+      const logoBuf = getLogoBuffer();
+      let logoImage = null;
+      if (logoBuf) {
+        try {
+          logoImage = await pdfDoc.embedPng(logoBuf);
+        } catch (embedErr) {
+          console.warn('[Watermark] Failed to embed PNG logo:', embedErr.message);
+        }
+      }
 
       pages.forEach((page) => {
         const { width, height } = page.getSize();
+
+        // 1. Draw centered official ABES Autonomy Logo
+        if (logoImage) {
+          const logoAspect = logoImage.width / logoImage.height;
+          const targetWidth = Math.min(width * 0.38, 220);
+          const targetHeight = targetWidth / logoAspect;
+          page.drawImage(logoImage, {
+            x: (width - targetWidth) / 2,
+            y: (height - targetHeight) / 2 + 35,
+            width: targetWidth,
+            height: targetHeight,
+            opacity: 0.22,
+          });
+        }
+
+        // 2. Draw watermark brand text below logo
         page.drawText('ABES Autonomy', {
-          x: width / 2 - 170,
-          y: height / 2,
-          size: 60,
-          font: helveticaFont,
-          color: rgb(0.6, 0.6, 0.6),
-          opacity: 0.3,
-          rotate: degrees(45),
+          x: width / 2 - 130,
+          y: height / 2 - 60,
+          size: 42,
+          font: helveticaBold,
+          color: rgb(0.55, 0.55, 0.55),
+          opacity: 0.25,
         });
+
+        // 3. Optional user email watermark
+        if (req.user?.email) {
+          page.drawText(`Licensed to ${req.user.email}`, {
+            x: width / 2 - 100,
+            y: height / 2 - 85,
+            size: 14,
+            font: helvetica,
+            color: rgb(0.65, 0.65, 0.65),
+            opacity: 0.35,
+          });
+        }
       });
 
       const pdfBytes = await pdfDoc.save();

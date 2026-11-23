@@ -3,6 +3,8 @@ import ApiResponse from '../utils/ApiResponse.js';
 import PDFAccessLog from '../models/PDFAccessLog.js';
 import User from '../models/User.js';
 
+export const FREE_PDF_LIMIT = 3;
+
 /**
  * Validates and updates user's subscription status on-the-fly.
  * Automatically marks expired subscriptions as EXPIRED.
@@ -32,7 +34,7 @@ export const validateUserSubscription = async (user) => {
  * - PYQs: FREE FOREVER for everyone (unrestricted, zero counter impact).
  * - Main Super Admin: Unrestricted PDF access.
  * - Active Premium Users: Unrestricted access to all resources.
- * - Free / Expired Users: 5 free accesses for non-PYQ documents.
+ * - Free / Expired Users: 3 free accesses for non-PYQ documents.
  * 
  * @param {object} user - Authenticated user document (or null)
  * @param {object} note - The Note document
@@ -82,31 +84,31 @@ export const evaluateNoteAccess = async (user, note) => {
     };
   }
 
-  // 5. Free PDF Access System (5 free documents)
+  // 5. Free PDF Access System (3 free documents)
   const currentCount = user.freePdfAccessCount || 0;
 
-  // Once all 5 free document accesses are exhausted, all non-PYQ documents are locked
-  if (currentCount >= 5) {
+  // Once all 3 free document accesses are exhausted, all non-PYQ documents are locked
+  if (currentCount >= FREE_PDF_LIMIT) {
     return {
       allowed: false,
       reason: 'limit_reached',
       code: 'PREMIUM_REQUIRED',
       remaining: 0,
       count: currentCount,
-      message: 'You have used all 5 free document accesses. Upgrade to ABES Autonomy Premium for unlimited access to all study materials.',
+      message: `You have used all ${FREE_PDF_LIMIT} free document accesses. Upgrade to ABES Autonomy Premium for unlimited access to all study materials.`,
     };
   }
 
   const noteIdStr = note._id.toString();
   const accessedIds = (user.freePdfAccessedIds || []).map((id) => id.toString());
 
-  // Repeated access to an already unlocked note within the 5 allowance does NOT count again
+  // Repeated access to an already unlocked note within the 3 allowance does NOT count again
   if (accessedIds.includes(noteIdStr)) {
     return {
       allowed: true,
       reason: 'free_allowance_repeat',
       consumeSlot: false,
-      remaining: Math.max(0, 5 - currentCount),
+      remaining: Math.max(0, FREE_PDF_LIMIT - currentCount),
       count: currentCount,
       message: 'Document already unlocked in your free allowance.',
     };
@@ -117,9 +119,9 @@ export const evaluateNoteAccess = async (user, note) => {
     allowed: true,
     reason: 'free_allowance_new',
     consumeSlot: true,
-    remaining: 5 - (currentCount + 1),
+    remaining: FREE_PDF_LIMIT - (currentCount + 1),
     count: currentCount + 1,
-    message: `Access granted (${currentCount + 1}/5 free document accesses used).`,
+    message: `Access granted (${currentCount + 1}/${FREE_PDF_LIMIT} free document accesses used).`,
   };
 };
 

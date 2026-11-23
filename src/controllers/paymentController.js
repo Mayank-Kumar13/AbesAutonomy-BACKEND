@@ -104,7 +104,7 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
     ]);
 
     const freeCount = user.freePdfAccessCount || 0;
-    const freeRemaining = Math.max(0, 5 - freeCount);
+    const freeRemaining = Math.max(0, 3 - freeCount);
 
     return ApiResponse.success(res, {
       isPremium: user.isPremium || false,

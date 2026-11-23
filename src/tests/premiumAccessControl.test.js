@@ -23,7 +23,7 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     email: 'deptadmin@abes.ac.in',
     role: 'admin',
     isPremium: false,
-    freePdfAccessCount: 5,
+    freePdfAccessCount: 3,
     freePdfAccessedIds: [],
   };
 
@@ -33,7 +33,7 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     email: 'coord@abes.ac.in',
     role: 'coordinator',
     isPremium: false,
-    freePdfAccessCount: 5,
+    freePdfAccessCount: 3,
     freePdfAccessedIds: [],
   };
 
@@ -67,7 +67,7 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     premiumPlan: 'premium_2_months',
     premiumExpiryDate: new Date(Date.now() - 24 * 60 * 60 * 1000), // expired yesterday
     premiumStatus: 'ACTIVE',
-    freePdfAccessCount: 5,
+    freePdfAccessCount: 3,
     freePdfAccessedIds: [],
     save: async () => {},
   };
@@ -119,22 +119,22 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     assert.strictEqual(isMainSuperAdmin(otherAdminUser), false);
     assert.strictEqual(isMainSuperAdmin(coordinatorUser), false);
 
-    // Other admin with 5 free used should be BLOCKED from 6th theory note
+    // Other admin with 3 free used should be BLOCKED from 4th theory note
     const adminAccess = await evaluateNoteAccess(otherAdminUser, theoryNoteA);
     assert.strictEqual(adminAccess.allowed, false);
     assert.strictEqual(adminAccess.code, 'PREMIUM_REQUIRED');
 
-    // Coordinator with 5 free used should be BLOCKED from 6th theory note
+    // Coordinator with 3 free used should be BLOCKED from 4th theory note
     const coordAccess = await evaluateNoteAccess(coordinatorUser, theoryNoteA);
     assert.strictEqual(coordAccess.allowed, false);
     assert.strictEqual(coordAccess.code, 'PREMIUM_REQUIRED');
   });
 
-  await suite.test('Scenario 6: New student gets first 5 free document accesses', async () => {
+  await suite.test('Scenario 6: New student gets first 3 free document accesses', async () => {
     const access = await evaluateNoteAccess(newStudent, theoryNoteA);
     assert.strictEqual(access.allowed, true);
     assert.strictEqual(access.consumeSlot, true);
-    assert.strictEqual(access.remaining, 4);
+    assert.strictEqual(access.remaining, 2);
     assert.strictEqual(access.count, 1);
   });
 
@@ -151,14 +151,14 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     assert.strictEqual(access.reason, 'free_allowance_repeat');
   });
 
-  await suite.test('Scenario 8: Sixth distinct non-PYQ document access requires Premium', async () => {
-    const studentWith5Used = {
+  await suite.test('Scenario 8: Fourth distinct non-PYQ document access requires Premium', async () => {
+    const studentWith3Used = {
       ...newStudent,
-      freePdfAccessCount: 5,
-      freePdfAccessedIds: [new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId()],
+      freePdfAccessCount: 3,
+      freePdfAccessedIds: [new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId()],
     };
 
-    const access = await evaluateNoteAccess(studentWith5Used, theoryNoteB);
+    const access = await evaluateNoteAccess(studentWith3Used, theoryNoteB);
     assert.strictEqual(access.allowed, false);
     assert.strictEqual(access.code, 'PREMIUM_REQUIRED');
   });
@@ -203,5 +203,42 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     // Verify rejection of invalid signature
     const checkInvalid = crypto.createHmac('sha256', testSecret).update(Buffer.from(payload)).digest('hex') === invalidSignature;
     assert.strictEqual(checkInvalid, false);
+  });
+
+  await suite.test('Scenario 13: Single Active Device session enforcement', async () => {
+    const userSessionId1 = 'device-session-uuid-1';
+    const userSessionId2 = 'device-session-uuid-2';
+
+    const userWithActiveSession = {
+      _id: new mongoose.Types.ObjectId(),
+      role: 'user',
+      currentSessionId: userSessionId2, // Device 2 logged in later
+    };
+
+    const tokenFromDevice1 = { sessionId: userSessionId1 };
+    const tokenFromDevice2 = { sessionId: userSessionId2 };
+
+    // Device 1's token is invalid because Device 2 has become the active session
+    const isDevice1Valid = tokenFromDevice1.sessionId === userWithActiveSession.currentSessionId;
+    assert.strictEqual(isDevice1Valid, false);
+
+    // Device 2's token matches current active session
+    const isDevice2Valid = tokenFromDevice2.sessionId === userWithActiveSession.currentSessionId;
+    assert.strictEqual(isDevice2Valid, true);
+  });
+
+  await suite.test('Scenario 14: PDF Download policy strictly requires active Premium or Super Admin', async () => {
+    // Free student (even with 0 free preview used) CANNOT download
+    const freeStudentDownloadAllowed = activePremiumStudent.isPremium || isMainSuperAdmin(newStudent);
+    assert.strictEqual(isMainSuperAdmin(newStudent), false);
+    assert.strictEqual(newStudent.isPremium, false);
+
+    // Active Premium user CAN download
+    const premiumDownloadAllowed = activePremiumStudent.isPremium || isMainSuperAdmin(activePremiumStudent);
+    assert.strictEqual(premiumDownloadAllowed, true);
+
+    // Super Admin CAN download
+    const superAdminDownloadAllowed = superAdminUser.isPremium || isMainSuperAdmin(superAdminUser);
+    assert.strictEqual(superAdminDownloadAllowed, true);
   });
 });

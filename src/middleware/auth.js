@@ -38,6 +38,16 @@ export const requireAuth = async (req, res, next) => {
       return ApiResponse.unauthorized(res, 'User no longer exists.');
     }
 
+    // Single Active Device Enforcement:
+    // If user has an active session recorded, verify this token matches the active session.
+    if (user.currentSessionId && decoded.sessionId !== user.currentSessionId) {
+      return ApiResponse.unauthorized(
+        res,
+        'Your account has been logged in on another device. You have been logged out on this device.',
+        { code: 'CONCURRENT_SESSION_LOGOUT' }
+      );
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -76,7 +86,11 @@ export const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, env.JWT_SECRET);
       const user = await User.findById(decoded.id);
-      if (user) req.user = user;
+      if (user) {
+        if (!user.currentSessionId || decoded.sessionId === user.currentSessionId) {
+          req.user = user;
+        }
+      }
     }
   } catch {
     // Silently ignore — optional auth
@@ -107,11 +121,16 @@ export const requireAdminOrCoordinator = (req, res, next) => {
 };
 
 /**
- * Generate JWT token for a user.
+ * Generate JWT token for a user with active device session tracking.
  */
-export const generateToken = (user) => {
+export const generateToken = (user, sessionId = null) => {
+  const activeSessionId = sessionId || user.currentSessionId || null;
+  const payload = { id: user._id, role: user.role };
+  if (activeSessionId) {
+    payload.sessionId = activeSessionId;
+  }
   return jwt.sign(
-    { id: user._id, role: user.role },
+    payload,
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );

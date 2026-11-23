@@ -125,6 +125,8 @@ export const login = async (req, res, next) => {
     }
 
     // Existing verified account: Directly authenticate WITHOUT sending email or OTP!
+    const sessionId = crypto.randomUUID();
+    user.currentSessionId = sessionId;
     user.lastLogin = new Date();
     user.lastActiveAt = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
@@ -138,7 +140,7 @@ export const login = async (req, res, next) => {
       ip: req.ip || '',
     });
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -204,6 +206,8 @@ export const verifyOtp = async (req, res, next) => {
     if (purpose === 'signup') {
       user.emailVerified = true;
     }
+    const sessionId = crypto.randomUUID();
+    user.currentSessionId = sessionId;
     user.lastLogin = new Date();
     user.lastActiveAt = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
@@ -217,7 +221,7 @@ export const verifyOtp = async (req, res, next) => {
       ip: req.ip || '',
     });
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
     const cookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -281,7 +285,7 @@ export const getProfile = async (req, res, next) => {
 
     const freeCount = req.user.freePdfAccessCount || 0;
     userJson.freePdfAccessCount = freeCount;
-    userJson.freePdfRemaining = Math.max(0, 5 - freeCount);
+    userJson.freePdfRemaining = Math.max(0, 3 - freeCount);
 
     if (req.user.isPremium && req.user.premiumExpiryDate) {
       const diffMs = new Date(req.user.premiumExpiryDate) - new Date();
@@ -326,5 +330,28 @@ export const updateProfile = async (req, res, next) => {
     return ApiResponse.success(res, user.toSafeJSON(), 'Profile updated successfully');
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Invalidate current session for single-device security
+ */
+export const logout = async (req, res) => {
+  try {
+    if (req.user) {
+      req.user.currentSessionId = null;
+      await req.user.save().catch(() => {});
+    }
+    const cookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
+    };
+    res.clearCookie('token', cookieOptions);
+    return ApiResponse.success(res, null, 'Logged out successfully');
+  } catch (error) {
+    return ApiResponse.success(res, null, 'Logged out');
   }
 };
