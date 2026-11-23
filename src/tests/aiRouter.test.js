@@ -259,7 +259,7 @@ test('providers without keys are skipped; GEMINI_API_KEY (singular) works; order
   });
   assert.deepStrictEqual(p.map((x) => x.name), ['groq', 'gemini']);
   assert.deepStrictEqual(p[0].keys, ['k1', 'k2']);
-  assert.ok(p[1].models.includes('gemini-2.5-flash'));
+  assert.ok(p[1].models.includes('gemini-3.8-flash'));
   assert.deepStrictEqual(loadProvidersFromConfig({}), []);
 });
 
