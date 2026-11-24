@@ -1,9 +1,63 @@
+import mongoose from 'mongoose';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import PDFAccessLog from '../models/PDFAccessLog.js';
 import User from '../models/User.js';
 
 export const FREE_PDF_LIMIT = 3;
+
+/**
+ * Checks and auto-renews 24-hour free PDF quota if 24h cycle has expired.
+ * 
+ * @param {object} user - Mongoose User document or plain user object
+ * @returns {Promise<boolean>} - true if quota was renewed
+ */
+export const validateAndRenewFreePdfQuota = async (user) => {
+  if (!user) return false;
+
+  const currentCount = user.freePdfAccessCount || 0;
+  const now = new Date();
+
+  // If reset date has arrived, reset count to 0 and clear accessed array
+  if (user.freePdfResetAt && new Date(user.freePdfResetAt) <= now) {
+    user.freePdfAccessCount = 0;
+    user.freePdfAccessedIds = [];
+    user.freePdfResetAt = null;
+
+    if (user._id && mongoose.connection?.readyState === 1 && typeof User?.findByIdAndUpdate === 'function') {
+      try {
+        await User.findByIdAndUpdate(user._id, {
+          $set: {
+            freePdfAccessCount: 0,
+            freePdfAccessedIds: [],
+            freePdfResetAt: null,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to auto-renew free PDF quota in DB:', err.message);
+      }
+    }
+    return true;
+  }
+
+  // If user has reached the limit (>= 3) but freePdfResetAt was never set, initialize it to 24h from now
+  if (currentCount >= FREE_PDF_LIMIT && !user.freePdfResetAt) {
+    const resetDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    user.freePdfResetAt = resetDate;
+
+    if (user._id && mongoose.connection?.readyState === 1 && typeof User?.findByIdAndUpdate === 'function') {
+      try {
+        await User.findByIdAndUpdate(user._id, {
+          $set: { freePdfResetAt: resetDate },
+        });
+      } catch (err) {
+        console.error('Failed to initialize freePdfResetAt in DB:', err.message);
+      }
+    }
+  }
+
+  return false;
+};
 
 /**
  * Validates and updates user's subscription status on-the-fly.
@@ -88,18 +142,30 @@ export const evaluateNoteAccess = async (user, note) => {
     };
   }
 
-  // 5. Free PDF Access System (3 free documents)
+  // 5. Free PDF Access System (3 free documents with 24-hour auto-renewal)
+  await validateAndRenewFreePdfQuota(user);
+
   const currentCount = user.freePdfAccessCount || 0;
 
-  // Once all 3 free document accesses are exhausted, all non-PYQ documents are locked
+  // Once all 3 free document accesses are exhausted, all non-PYQ documents are locked until 24h timer expires
   if (currentCount >= FREE_PDF_LIMIT) {
+    const now = Date.now();
+    const resetTime = user.freePdfResetAt ? new Date(user.freePdfResetAt).getTime() : (now + 24 * 60 * 60 * 1000);
+    const diffMs = Math.max(0, resetTime - now);
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const resetInSeconds = Math.ceil(diffMs / 1000);
+
     return {
       allowed: false,
       reason: 'limit_reached',
       code: 'PREMIUM_REQUIRED',
       remaining: 0,
       count: currentCount,
-      message: `You have used all ${FREE_PDF_LIMIT} free document accesses. Upgrade to ABES Autonomy Premium for unlimited access to all study materials.`,
+      freePdfResetAt: user.freePdfResetAt || new Date(resetTime),
+      resetInSeconds,
+      resetInMs: diffMs,
+      message: `You have used all ${FREE_PDF_LIMIT} free document accesses for today. Buy ABES Autonomy Premium for unlimited access, or wait ${hours}h ${minutes}m for your 24-hour free daily quota to renew.`,
     };
   }
 
@@ -140,18 +206,31 @@ export const recordPdfAccess = async (req, user, note, evaluationResult) => {
 
     // If new free slot was consumed, update user securely in MongoDB
     if (user && evaluationResult.consumeSlot) {
-      await User.findByIdAndUpdate(user._id, {
+      const newCount = (user.freePdfAccessCount || 0) + 1;
+      const updateFields = {
         $inc: { freePdfAccessCount: 1 },
         $addToSet: { freePdfAccessedIds: note._id },
-      });
+      };
+
+      // If user reaches limit with this access, start the 24-hour reset countdown
+      if (newCount >= FREE_PDF_LIMIT && !user.freePdfResetAt) {
+        const resetDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        updateFields.$set = { freePdfResetAt: resetDate };
+        user.freePdfResetAt = resetDate;
+      }
+
+      if (mongoose.connection?.readyState === 1) {
+        await User.findByIdAndUpdate(user._id, updateFields);
+      }
       // Synchronize in-memory user object
-      user.freePdfAccessCount = (user.freePdfAccessCount || 0) + 1;
+      user.freePdfAccessCount = newCount;
       if (!user.freePdfAccessedIds) user.freePdfAccessedIds = [];
       user.freePdfAccessedIds.push(note._id);
     }
 
     // Log the access
-    await PDFAccessLog.create({
+    if (mongoose.connection?.readyState === 1) {
+      await PDFAccessLog.create({
       userId: user?._id || null,
       userEmail: user?.email || '',
       userName: user?.name || '',
@@ -172,6 +251,7 @@ export const recordPdfAccess = async (req, user, note, evaluationResult) => {
       ip,
       userAgent,
     });
+    }
   } catch (err) {
     console.error('Failed to record PDF access log:', err.message);
   }

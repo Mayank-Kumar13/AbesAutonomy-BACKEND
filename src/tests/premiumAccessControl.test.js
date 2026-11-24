@@ -264,4 +264,40 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     const superAdminDownloadAllowed = superAdminUser.isPremium || isMainSuperAdmin(superAdminUser);
     assert.strictEqual(superAdminDownloadAllowed, true);
   });
+
+  await suite.test('Scenario 15: 24-Hour Free PDF Quota Renewal Cycle', async () => {
+    // 1. User with 3 accesses used is blocked and given a 24-hour countdown timer
+    const studentWithLimit = {
+      _id: 'student_renewal_test',
+      role: 'student',
+      isPremium: false,
+      freePdfAccessCount: 3,
+      freePdfAccessedIds: ['doc_1', 'doc_2', 'doc_3'],
+      freePdfResetAt: null,
+    };
+
+    const blockedAccess = await evaluateNoteAccess(studentWithLimit, theoryNoteB);
+    assert.strictEqual(blockedAccess.allowed, false);
+    assert.strictEqual(blockedAccess.code, 'PREMIUM_REQUIRED');
+    assert.ok(blockedAccess.freePdfResetAt instanceof Date || typeof blockedAccess.freePdfResetAt === 'string');
+    assert.ok(blockedAccess.resetInSeconds > 0 && blockedAccess.resetInSeconds <= 86400);
+    assert.ok(blockedAccess.message.includes('24-hour'));
+
+    // 2. When 24 hours have passed, user quota auto-renews back to 0
+    const studentAfter24Hours = {
+      _id: 'student_renewal_test_2',
+      role: 'student',
+      isPremium: false,
+      freePdfAccessCount: 3,
+      freePdfAccessedIds: ['doc_1', 'doc_2', 'doc_3'],
+      freePdfResetAt: new Date(Date.now() - 1000), // 1 second ago (24h expired)
+    };
+
+    const renewedAccess = await evaluateNoteAccess(studentAfter24Hours, theoryNoteB);
+    assert.strictEqual(renewedAccess.allowed, true);
+    assert.strictEqual(renewedAccess.reason, 'free_allowance_new');
+    assert.strictEqual(studentAfter24Hours.freePdfAccessCount, 0);
+    assert.strictEqual(studentAfter24Hours.freePdfResetAt, null);
+    assert.strictEqual(studentAfter24Hours.freePdfAccessedIds.length, 0);
+  });
 });

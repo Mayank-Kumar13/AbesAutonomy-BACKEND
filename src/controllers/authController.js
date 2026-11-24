@@ -9,7 +9,7 @@ import { generateToken } from '../middleware/auth.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import env from '../config/env.js';
 import { verifyTurnstileToken } from '../utils/turnstile.js';
-import { validateUserSubscription } from '../middleware/accessControl.js';
+import { validateUserSubscription, validateAndRenewFreePdfQuota } from '../middleware/accessControl.js';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
 
 // Captcha has been disabled to prevent server CPU spikes and ensure smooth logins
@@ -279,8 +279,9 @@ export const resendOtp = async (req, res, next) => {
  */
 export const getProfile = async (req, res, next) => {
   try {
-    // Validate subscription status on-the-fly
+    // Validate subscription status on-the-fly & auto-renew 24h free quota
     await validateUserSubscription(req.user);
+    await validateAndRenewFreePdfQuota(req.user);
 
     const userJson = req.user.toSafeJSON();
     const review = await Review.findOne({ user: req.user._id });
@@ -290,6 +291,10 @@ export const getProfile = async (req, res, next) => {
     const freeCount = req.user.freePdfAccessCount || 0;
     userJson.freePdfAccessCount = freeCount;
     userJson.freePdfRemaining = Math.max(0, 3 - freeCount);
+    userJson.freePdfResetAt = req.user.freePdfResetAt || null;
+    if (req.user.freePdfResetAt) {
+      userJson.freePdfResetInSeconds = Math.max(0, Math.ceil((new Date(req.user.freePdfResetAt) - new Date()) / 1000));
+    }
 
     if (req.user.isPremium && req.user.premiumExpiryDate) {
       const diffMs = new Date(req.user.premiumExpiryDate) - new Date();

@@ -143,6 +143,10 @@ const userSchema = new mongoose.Schema(
       }],
       default: [],
     },
+    freePdfResetAt: {
+      type: Date,
+      default: null,
+    },
 
     // ─── Single Active Device Session ───────────────────
     currentSessionId: {

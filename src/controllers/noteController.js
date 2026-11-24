@@ -85,6 +85,9 @@ export const checkNoteAccessStatus = async (req, res, next) => {
       message: access.message,
       remaining: access.remaining !== undefined ? access.remaining : (req.user ? Math.max(0, 3 - (req.user.freePdfAccessCount || 0)) : 3),
       count: access.count !== undefined ? access.count : (req.user?.freePdfAccessCount || 0),
+      freePdfResetAt: access.freePdfResetAt || req.user?.freePdfResetAt || null,
+      resetInSeconds: access.resetInSeconds !== undefined ? access.resetInSeconds : (req.user?.freePdfResetAt ? Math.max(0, Math.ceil((new Date(req.user.freePdfResetAt) - Date.now()) / 1000)) : null),
+      resetInMs: access.resetInMs !== undefined ? access.resetInMs : (req.user?.freePdfResetAt ? Math.max(0, new Date(req.user.freePdfResetAt) - Date.now()) : null),
       isPremium: req.user?.isPremium || false,
       isSuperAdmin: isMainSuperAdmin(req.user),
       resourceType: note.resourceType,
@@ -115,6 +118,9 @@ export const streamNotePdf = async (req, res, next) => {
         message: access.message,
         remaining: access.remaining,
         count: access.count,
+        freePdfResetAt: access.freePdfResetAt || req.user?.freePdfResetAt || null,
+        resetInSeconds: access.resetInSeconds !== undefined ? access.resetInSeconds : (req.user?.freePdfResetAt ? Math.max(0, Math.ceil((new Date(req.user.freePdfResetAt) - Date.now()) / 1000)) : null),
+        resetInMs: access.resetInMs !== undefined ? access.resetInMs : (req.user?.freePdfResetAt ? Math.max(0, new Date(req.user.freePdfResetAt) - Date.now()) : null),
         isPremium: req.user?.isPremium || false,
       });
     }
@@ -242,6 +248,9 @@ export const downloadNotePdf = async (req, res, next) => {
         message: access.message,
         remaining: access.remaining,
         count: access.count,
+        freePdfResetAt: access.freePdfResetAt || req.user?.freePdfResetAt || null,
+        resetInSeconds: access.resetInSeconds !== undefined ? access.resetInSeconds : (req.user?.freePdfResetAt ? Math.max(0, Math.ceil((new Date(req.user.freePdfResetAt) - Date.now()) / 1000)) : null),
+        resetInMs: access.resetInMs !== undefined ? access.resetInMs : (req.user?.freePdfResetAt ? Math.max(0, new Date(req.user.freePdfResetAt) - Date.now()) : null),
         isPremium: req.user?.isPremium || false,
       });
     }

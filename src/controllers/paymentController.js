@@ -4,7 +4,7 @@ import {
   verifyPayment,
   processWebhook,
 } from '../services/paymentService.js';
-import { validateUserSubscription } from '../middleware/accessControl.js';
+import { validateUserSubscription, validateAndRenewFreePdfQuota } from '../middleware/accessControl.js';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import Payment from '../models/Payment.js';
 import Subscription from '../models/Subscription.js';
@@ -91,6 +91,7 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
   try {
     const user = req.user;
     await validateUserSubscription(user);
+    await validateAndRenewFreePdfQuota(user);
 
     const now = new Date();
     let daysRemaining = 0;
@@ -119,6 +120,8 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
       daysRemaining,
       freePdfAccessCount: freeCount,
       freePdfRemaining: freeRemaining,
+      freePdfResetAt: user.freePdfResetAt || null,
+      freePdfResetInSeconds: user.freePdfResetAt ? Math.max(0, Math.ceil((new Date(user.freePdfResetAt) - now) / 1000)) : null,
       isSuperAdmin: isMainSuperAdmin(user),
       payments,
       subscriptions,
