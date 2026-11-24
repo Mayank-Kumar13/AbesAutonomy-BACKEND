@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const PAYMENT_STATUSES = ['created', 'captured', 'failed', 'refunded'];
-const PLANS = ['premium_2_months', 'premium_4_months'];
+const PLANS = ['premium_1_month', 'premium_2_months', 'premium_4_months', 'premium_lifetime'];
 
 const paymentSchema = new mongoose.Schema(
   {
@@ -36,7 +36,7 @@ const paymentSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: true, // in paise: 10000 = ₹100, 15000 = ₹150
+      required: true, // in paise: 4900 = ₹49, 13900 = ₹139, 49900 = ₹499
     },
     currency: {
       type: String,

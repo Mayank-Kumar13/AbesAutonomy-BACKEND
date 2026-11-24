@@ -113,7 +113,7 @@ const userSchema = new mongoose.Schema(
     },
     premiumPlan: {
       type: String,
-      enum: ['premium_2_months', 'premium_4_months', null],
+      enum: ['premium_1_month', 'premium_2_months', 'premium_4_months', 'premium_lifetime', null],
       default: null,
     },
     premiumStartDate: {

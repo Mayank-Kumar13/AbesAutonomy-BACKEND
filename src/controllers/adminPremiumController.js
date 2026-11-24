@@ -27,7 +27,7 @@ export const getPremiumAnalytics = async (req, res, next) => {
       recentTransactions,
     ] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ isPremium: true, premiumExpiryDate: { $gt: now } }),
+      User.countDocuments({ isPremium: true, $or: [{ premiumExpiryDate: { $gt: now } }, { premiumPlan: 'premium_lifetime' }] }),
       User.countDocuments({ premiumStatus: 'EXPIRED' }),
       Payment.aggregate([
         {
@@ -38,8 +38,10 @@ export const getPremiumAnalytics = async (req, res, next) => {
           },
         },
       ]),
+      Payment.countDocuments({ status: 'captured', plan: 'premium_1_month' }),
       Payment.countDocuments({ status: 'captured', plan: 'premium_2_months' }),
       Payment.countDocuments({ status: 'captured', plan: 'premium_4_months' }),
+      Payment.countDocuments({ status: 'captured', plan: 'premium_lifetime' }),
       Payment.find().sort({ createdAt: -1 }).limit(10).lean(),
     ]);
 
@@ -60,8 +62,10 @@ export const getPremiumAnalytics = async (req, res, next) => {
       successfulPaymentsCount: capturedStats.count,
       failedPaymentsCount: failedStats.count,
       refundedPaymentsCount: refundedStats.count,
+      plan1mSales: plan1mCount,
       plan2mSales: plan2mCount,
       plan4mSales: plan4mCount,
+      planLifetimeSales: planLifetimeCount,
       conversionRate: `${conversionRate}%`,
       recentTransactions,
     });

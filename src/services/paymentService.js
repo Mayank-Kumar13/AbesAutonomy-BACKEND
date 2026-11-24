@@ -13,20 +13,61 @@ import AdminAuditLog from '../models/AdminAuditLog.js';
  * Amounts are strictly defined on the server in paise (INR).
  */
 export const SUBSCRIPTION_PLANS = {
+  premium_1_month: {
+    id: 'premium_1_month',
+    name: 'Monthly Plan',
+    subTitle: '1-Month Exam Sprint',
+    amount: 4900, // 4900 paise = ₹49
+    priceInRupees: 49,
+    durationDays: 30,
+    features: [
+      'Unlimited access to all subject notes & theory PDFs',
+      'AI Academic Study Assistant & instant doubt solver',
+      'Handwritten toppers\' notes & assignment solutions',
+      'PYQs included 100% free forever',
+      'Verified student Premium badge',
+    ],
+  },
+  premium_4_months: {
+    id: 'premium_4_months',
+    name: 'Semester Plan',
+    subTitle: 'Full Semester Coverage',
+    amount: 13900, // 13900 paise = ₹139
+    priceInRupees: 139,
+    durationDays: 120,
+    isBestValue: true,
+    features: [
+      'All Monthly Plan features included',
+      'Full 120-Day semester exam protection',
+      'Priority AI Study Assistant query processing',
+      'Complete question bank & solved sample papers',
+      'Early access to upcoming 2.0 academic tools',
+    ],
+  },
+  premium_lifetime: {
+    id: 'premium_lifetime',
+    name: 'Lifetime Plan',
+    subTitle: 'Entire 4-Year B.Tech Degree Access',
+    amount: 49900, // 49900 paise = ₹499
+    priceInRupees: 499,
+    durationDays: 36500, // 100 years lifetime coverage
+    isLifetime: true,
+    features: [
+      'Permanent lifetime access — Zero renewals',
+      'All 8 Semesters across all engineering branches',
+      'Unlimited high-speed downloads & offline saves',
+      'Unrestricted AI Assistant with highest token limit',
+      'Exclusive Lifetime Scholar verified badge & VIP support',
+    ],
+  },
+  // Legacy / fallback plan support
   premium_2_months: {
     id: 'premium_2_months',
     name: 'Premium – 2 Months',
     amount: 10000, // 10000 paise = ₹100
     priceInRupees: 100,
     durationDays: 60,
-  },
-  premium_4_months: {
-    id: 'premium_4_months',
-    name: 'Premium – 4 Months',
-    amount: 15000, // 15000 paise = ₹150
-    priceInRupees: 150,
-    durationDays: 120,
-    isBestValue: true,
+    isLegacy: true,
   },
 };
 
@@ -120,7 +161,10 @@ export const activateOrExtendSubscription = async (
     baseDate = new Date(user.premiumExpiryDate);
   }
 
-  const newExpiryDate = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  // If lifetime plan, set expiry date 100 years in the future
+  const newExpiryDate = (plan?.isLifetime || planId === 'premium_lifetime')
+    ? new Date(now.getTime() + 100 * 365.25 * 24 * 60 * 60 * 1000)
+    : new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
   const previousState = {
     isPremium: user.isPremium,
@@ -130,7 +174,7 @@ export const activateOrExtendSubscription = async (
   };
 
   user.isPremium = true;
-  user.premiumPlan = planId || 'premium_2_months';
+  user.premiumPlan = planId || 'premium_4_months';
   if (!user.premiumStartDate) user.premiumStartDate = now;
   user.premiumExpiryDate = newExpiryDate;
   user.premiumStatus = 'ACTIVE';
@@ -140,7 +184,7 @@ export const activateOrExtendSubscription = async (
   const subscriptionRecord = await Subscription.create({
     userId: user._id,
     paymentId,
-    plan: planId || 'premium_2_months',
+    plan: planId || 'premium_4_months',
     startDate: now,
     endDate: newExpiryDate,
     status: 'active',

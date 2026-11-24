@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const SUBSCRIPTION_STATUSES = ['active', 'expired', 'revoked', 'extended'];
-const PLANS = ['premium_2_months', 'premium_4_months'];
+const PLANS = ['premium_1_month', 'premium_2_months', 'premium_4_months', 'premium_lifetime'];
 const ACTIVATED_BY = ['payment', 'webhook', 'admin_manual'];
 
 const subscriptionSchema = new mongoose.Schema(

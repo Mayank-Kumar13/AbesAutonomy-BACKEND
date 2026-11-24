@@ -95,7 +95,11 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
     const now = new Date();
     let daysRemaining = 0;
     if (user.isPremium && user.premiumExpiryDate) {
-      daysRemaining = Math.max(0, Math.ceil((new Date(user.premiumExpiryDate) - now) / (1000 * 60 * 60 * 24)));
+      if (user.premiumPlan === 'premium_lifetime') {
+        daysRemaining = 99999;
+      } else {
+        daysRemaining = Math.max(0, Math.ceil((new Date(user.premiumExpiryDate) - now) / (1000 * 60 * 60 * 24)));
+      }
     }
 
     const [payments, subscriptions] = await Promise.all([

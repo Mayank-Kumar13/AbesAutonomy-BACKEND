@@ -181,12 +181,15 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
   });
 
   await suite.test('Scenario 11: Subscription pricing rules are strictly fixed in paise', async () => {
-    assert.strictEqual(SUBSCRIPTION_PLANS.premium_2_months.amount, 10000); // ₹100
-    assert.strictEqual(SUBSCRIPTION_PLANS.premium_2_months.durationDays, 60);
+    assert.strictEqual(SUBSCRIPTION_PLANS.premium_1_month.amount, 4900); // ₹49
+    assert.strictEqual(SUBSCRIPTION_PLANS.premium_1_month.durationDays, 30);
 
-    assert.strictEqual(SUBSCRIPTION_PLANS.premium_4_months.amount, 15000); // ₹150
+    assert.strictEqual(SUBSCRIPTION_PLANS.premium_4_months.amount, 13900); // ₹139
     assert.strictEqual(SUBSCRIPTION_PLANS.premium_4_months.durationDays, 120);
     assert.strictEqual(SUBSCRIPTION_PLANS.premium_4_months.isBestValue, true);
+
+    assert.strictEqual(SUBSCRIPTION_PLANS.premium_lifetime.amount, 49900); // ₹499
+    assert.strictEqual(SUBSCRIPTION_PLANS.premium_lifetime.isLifetime, true);
   });
 
   await suite.test('Scenario 12: Razorpay Webhook signature verification', async () => {

@@ -16,6 +16,10 @@ export const validateUserSubscription = async (user) => {
   if (!user) return false;
 
   if (user.isPremium) {
+    // Lifetime subscription never expires
+    if (user.premiumPlan === 'premium_lifetime') {
+      return true;
+    }
     if (user.premiumExpiryDate && new Date(user.premiumExpiryDate) <= new Date()) {
       user.isPremium = false;
       user.premiumStatus = 'EXPIRED';
