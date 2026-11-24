@@ -17,8 +17,8 @@ export const SUBSCRIPTION_PLANS = {
     id: 'premium_1_month',
     name: 'Monthly Plan',
     subTitle: '1-Month Exam Sprint',
-    amount: 4900, // 4900 paise = ₹49
-    priceInRupees: 49,
+    amount: 2900, // 2900 paise = ₹29
+    priceInRupees: 29,
     durationDays: 30,
     features: [
       'Unlimited access to all subject notes & theory PDFs',
@@ -32,8 +32,8 @@ export const SUBSCRIPTION_PLANS = {
     id: 'premium_4_months',
     name: 'Semester Plan',
     subTitle: 'Full Semester Coverage',
-    amount: 13900, // 13900 paise = ₹139
-    priceInRupees: 139,
+    amount: 9900, // 9900 paise = ₹99
+    priceInRupees: 99,
     durationDays: 120,
     isBestValue: true,
     features: [
@@ -48,8 +48,8 @@ export const SUBSCRIPTION_PLANS = {
     id: 'premium_lifetime',
     name: 'Lifetime Plan',
     subTitle: 'Entire 4-Year B.Tech Degree Access',
-    amount: 49900, // 49900 paise = ₹499
-    priceInRupees: 499,
+    amount: 39900, // 39900 paise = ₹399
+    priceInRupees: 399,
     durationDays: 36500, // 100 years lifetime coverage
     isLifetime: true,
     features: [

@@ -36,7 +36,7 @@ const paymentSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: true, // in paise: 4900 = ₹49, 13900 = ₹139, 49900 = ₹499
+      required: true, // in paise: 2900 = ₹29, 9900 = ₹99, 39900 = ₹399
     },
     currency: {
       type: String,
