@@ -1,6 +1,13 @@
 import Subject from '../models/Subject.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
+const subjectCache = new Map();
+const SUBJECT_CACHE_TTL_MS = 30000; // 30s cache for active subjects
+
+export const clearSubjectCache = () => {
+  subjectCache.clear();
+};
+
 /**
  * GET /api/subjects
  * Get active subjects, optionally filtered by year and group.
@@ -8,6 +15,13 @@ import ApiResponse from '../utils/ApiResponse.js';
 export const getSubjects = async (req, res, next) => {
   try {
     const { year, group, all } = req.query;
+    const cacheKey = `${year || 'any'}_${group || 'any'}_${all || 'false'}_${req.user?.role || 'anon'}`;
+    const cached = subjectCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && now < cached.expiry) {
+      return ApiResponse.success(res, cached.data);
+    }
+
     const filter = {};
 
     // Only admins can see inactive subjects by passing all=true
@@ -27,6 +41,7 @@ export const getSubjects = async (req, res, next) => {
     }
 
     const subjects = await Subject.find(filter).sort({ displayOrder: 1, name: 1 }).lean();
+    subjectCache.set(cacheKey, { data: subjects, expiry: now + SUBJECT_CACHE_TTL_MS });
     return ApiResponse.success(res, subjects);
   } catch (error) {
     next(error);
@@ -65,6 +80,7 @@ export const createSubject = async (req, res, next) => {
     });
 
     await subject.save();
+    clearSubjectCache();
     return ApiResponse.created(res, subject);
   } catch (error) {
     next(error);
@@ -89,6 +105,7 @@ export const updateSubject = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Subject not found' });
     }
 
+    clearSubjectCache();
     return ApiResponse.success(res, subject);
   } catch (error) {
     next(error);
@@ -108,6 +125,7 @@ export const deleteSubject = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Subject not found' });
     }
 
+    clearSubjectCache();
     return ApiResponse.success(res, { message: 'Subject deleted successfully' });
   } catch (error) {
     next(error);

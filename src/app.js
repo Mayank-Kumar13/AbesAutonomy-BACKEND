@@ -113,6 +113,10 @@ app.use(
       'Authorization',
       'Range',
       'Accept',
+      'X-Synthetic-Test',
+      'X-Synthetic-VU-ID',
+      'X-Synthetic-Secret',
+      'X-Requested-With',
     ],
   })
 );
