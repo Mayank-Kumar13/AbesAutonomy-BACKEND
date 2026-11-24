@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Payment from '../models/Payment.js';
 import Subscription from '../models/Subscription.js';
@@ -84,24 +85,37 @@ export const getPremiumUsers = async (req, res, next) => {
     const filter = {};
 
     if (q) {
-      filter.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } },
+      const trimmedQ = q.trim();
+      const orConditions = [
+        { name: { $regex: trimmedQ, $options: 'i' } },
+        { email: { $regex: trimmedQ, $options: 'i' } },
       ];
+      if (mongoose.Types.ObjectId.isValid(trimmedQ)) {
+        orConditions.push({ _id: trimmedQ });
+      }
+      filter.$or = orConditions;
     }
 
     const now = new Date();
     if (status === 'active') {
       filter.isPremium = true;
-      filter.premiumExpiryDate = { $gt: now };
+      filter.$or = [
+        { premiumExpiryDate: { $gt: now } },
+        { premiumPlan: 'premium_lifetime' },
+      ];
     } else if (status === 'expired') {
       filter.$or = [
         { premiumStatus: 'EXPIRED' },
-        { isPremium: true, premiumExpiryDate: { $lte: now } },
+        { isPremium: true, premiumExpiryDate: { $lte: now }, premiumPlan: { $ne: 'premium_lifetime' } },
       ];
     } else if (status === 'free') {
       filter.isPremium = false;
       filter.premiumStatus = { $ne: 'EXPIRED' };
+    } else if (status === 'verified') {
+      filter.$or = [
+        { emailVerified: true },
+        { provider: { $in: ['google', 'github'] } },
+      ];
     }
 
     const pageNum = Math.max(1, parseInt(page, 10));
@@ -110,7 +124,7 @@ export const getPremiumUsers = async (req, res, next) => {
 
     const [users, total] = await Promise.all([
       User.find(filter)
-        .select('name email role provider isPremium premiumPlan premiumStartDate premiumExpiryDate premiumStatus freePdfAccessCount createdAt')
+        .select('name email role provider isPremium premiumPlan premiumStartDate premiumExpiryDate premiumStatus freePdfAccessCount emailVerified createdAt')
         .sort({ isPremium: -1, createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -119,15 +133,20 @@ export const getPremiumUsers = async (req, res, next) => {
     ]);
 
     const enrichedUsers = users.map((u) => {
-      const isSubActive = u.isPremium && u.premiumExpiryDate && new Date(u.premiumExpiryDate) > now;
+      const isLifetime = u.premiumPlan === 'premium_lifetime';
+      const isSubActive = Boolean(u.isPremium && (isLifetime || (u.premiumExpiryDate && new Date(u.premiumExpiryDate) > now)));
       let daysRemaining = 0;
       if (isSubActive) {
-        daysRemaining = Math.max(0, Math.ceil((new Date(u.premiumExpiryDate) - now) / 86400000));
+        daysRemaining = isLifetime ? 99999 : Math.max(0, Math.ceil((new Date(u.premiumExpiryDate) - now) / 86400000));
       }
+      const isVerified = Boolean(u.emailVerified || u.provider === 'google' || u.provider === 'github');
+
       return {
         ...u,
         isSuperAdmin: isMainSuperAdmin(u),
         isActivelyPremium: isSubActive,
+        isLifetime,
+        isVerified,
         daysRemaining,
         freeRemaining: Math.max(0, 3 - (u.freePdfAccessCount || 0)),
       };
@@ -179,8 +198,21 @@ export const getUserSubscriptionDetails = async (req, res, next) => {
  */
 export const manualActivateSubscription = async (req, res, next) => {
   try {
-    const { plan = 'premium_2_months', customDays, reason = 'Admin manual grant' } = req.body;
-    const targetUserId = req.params.id;
+    const { plan = 'premium_4_months', customDays, reason = 'Admin manual grant' } = req.body;
+    let targetUserId = req.params.id;
+
+    // Support direct grant by passing userId or email in request body
+    if (!targetUserId || targetUserId === 'direct') {
+      if (req.body.userId) targetUserId = req.body.userId.trim();
+      else if (req.body.email) {
+        const found = await User.findOne({ email: req.body.email.trim().toLowerCase() });
+        if (found) targetUserId = found._id;
+      }
+    }
+
+    if (!targetUserId) {
+      return ApiResponse.badRequest(res, 'Valid target user ID or email is required.');
+    }
 
     const { user, subscription, previousState } = await activateOrExtendSubscription(
       targetUserId,
