@@ -192,6 +192,9 @@ import creditsRoutes from './routes/creditsRoutes.js';
 app.use('/api/notes', noteRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', oauthRoutes);
+// Fallback aliases for requests without /api prefix
+app.use('/auth', oauthRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/reviews', reviewRoutes);

@@ -95,6 +95,14 @@ export const register = async (req, res, next) => {
 /**
  * POST /api/auth/login
  */
+const getCookieOptions = (req) => ({
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+  domain: (env.NODE_ENV === 'production' && req?.hostname?.endsWith('abes.work')) ? '.abes.work' : undefined,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
 export const login = async (req, res, next) => {
   try {
     const { email, password, turnstileToken } = req.body;
@@ -146,14 +154,7 @@ export const login = async (req, res, next) => {
     });
 
     const token = generateToken(user, sessionId);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
-    res.cookie('token', token, cookieOptions);
+    res.cookie('token', token, getCookieOptions(req));
 
     return ApiResponse.success(
       res,
@@ -232,14 +233,7 @@ export const verifyOtp = async (req, res, next) => {
     });
 
     const token = generateToken(user, sessionId);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
-    res.cookie('token', token, cookieOptions);
+    res.cookie('token', token, getCookieOptions(req));
 
     return ApiResponse.success(
       res,

@@ -87,3 +87,9 @@ const env = {
 };
 
 export default env;
+
+if (env.GOOGLE_REDIRECT_URI && !env.GOOGLE_REDIRECT_URI.endsWith('/callback')) {
+  console.warn(
+    `⚠️ [OAuth Warning] GOOGLE_REDIRECT_URI (${env.GOOGLE_REDIRECT_URI}) does not end with '/callback'. Ensure it points to the callback route (e.g., https://api.abes.work/api/auth/google/callback).`
+  );
+}

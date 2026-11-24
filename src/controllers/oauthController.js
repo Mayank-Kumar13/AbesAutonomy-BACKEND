@@ -39,6 +39,14 @@ const findOrCreateOAuthUser = async ({ provider, providerId, email, name, pictur
   return user;
 };
 
+const getCookieOptions = (req) => ({
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+  domain: (env.NODE_ENV === 'production' && req?.hostname?.endsWith('abes.work')) ? '.abes.work' : undefined,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
 const recordLogin = async (user) => {
   let sessionId = null;
   if (!isMainSuperAdmin(user)) {
@@ -82,13 +90,7 @@ export const googleCallback = async (req, res) => {
     const sessionId = await recordLogin(user);
 
     const token = generateToken(user, sessionId);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
+    const cookieOptions = getCookieOptions(req);
     res.cookie('token', token, cookieOptions);
     console.log('[DIAGNOSTIC] googleCallback GET: Setting cookie and redirecting. Cookie Options:', cookieOptions);
     res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
@@ -122,13 +124,7 @@ export const googleCallbackPost = async (req, res) => {
     const sessionId = await recordLogin(user);
 
     const token = generateToken(user, sessionId);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
+    const cookieOptions = getCookieOptions(req);
     res.cookie('token', token, cookieOptions);
     console.log('[DIAGNOSTIC] googleCallback POST: Setting cookie and returning JSON. Cookie Options:', cookieOptions);
     res.json({ success: true, token, user });
@@ -165,13 +161,8 @@ export const githubCallback = async (req, res) => {
     const sessionId = await recordLogin(user);
 
     const token = generateToken(user, sessionId);
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    const cookieOptions = getCookieOptions(req);
+    res.cookie('token', token, cookieOptions);
     res.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('GitHub OAuth error:', error.message);
@@ -202,13 +193,7 @@ export const githubCallbackPost = async (req, res) => {
     const sessionId = await recordLogin(user);
 
     const token = generateToken(user, sessionId);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: env.NODE_ENV === 'production' ? '.abes.work' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
+    const cookieOptions = getCookieOptions(req);
     res.cookie('token', token, cookieOptions);
     res.json({ success: true, token, user });
   } catch (error) {
