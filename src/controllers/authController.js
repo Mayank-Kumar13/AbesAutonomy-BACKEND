@@ -125,8 +125,13 @@ export const login = async (req, res, next) => {
     }
 
     // Existing verified account: Directly authenticate WITHOUT sending email or OTP!
-    const sessionId = crypto.randomUUID();
-    user.currentSessionId = sessionId;
+    let sessionId = null;
+    if (!isMainSuperAdmin(user)) {
+      sessionId = crypto.randomUUID();
+      user.currentSessionId = sessionId;
+    } else {
+      user.currentSessionId = null;
+    }
     user.lastLogin = new Date();
     user.lastActiveAt = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
@@ -206,8 +211,13 @@ export const verifyOtp = async (req, res, next) => {
     if (purpose === 'signup') {
       user.emailVerified = true;
     }
-    const sessionId = crypto.randomUUID();
-    user.currentSessionId = sessionId;
+    let sessionId = null;
+    if (!isMainSuperAdmin(user)) {
+      sessionId = crypto.randomUUID();
+      user.currentSessionId = sessionId;
+    } else {
+      user.currentSessionId = null;
+    }
     user.lastLogin = new Date();
     user.lastActiveAt = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
@@ -339,7 +349,7 @@ export const updateProfile = async (req, res, next) => {
  */
 export const logout = async (req, res) => {
   try {
-    if (req.user) {
+    if (req.user && !isMainSuperAdmin(req.user)) {
       req.user.currentSessionId = null;
       await req.user.save().catch(() => {});
     }

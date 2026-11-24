@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
 import User from '../models/User.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 
 /**
  * Verify JWT token and attach user to request.
@@ -39,13 +40,16 @@ export const requireAuth = async (req, res, next) => {
     }
 
     // Single Active Device Enforcement:
-    // If user has an active session recorded, verify this token matches the active session.
-    if (user.currentSessionId && decoded.sessionId !== user.currentSessionId) {
-      return ApiResponse.unauthorized(
-        res,
-        'Your account has been logged in on another device. You have been logged out on this device.',
-        { code: 'CONCURRENT_SESSION_LOGOUT' }
-      );
+    // Simple accounts (students) and other admin/coordinator accounts are strictly restricted to ONE active device.
+    // The main super admin account is EXEMPT: multiple devices/team members can log in concurrently without getting logged out.
+    if (!isMainSuperAdmin(user)) {
+      if (user.currentSessionId && decoded.sessionId !== user.currentSessionId) {
+        return ApiResponse.unauthorized(
+          res,
+          'Your account has been logged in on another device. You have been logged out on this device.',
+          { code: 'CONCURRENT_SESSION_LOGOUT' }
+        );
+      }
     }
 
     req.user = user;
@@ -87,7 +91,7 @@ export const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, env.JWT_SECRET);
       const user = await User.findById(decoded.id);
       if (user) {
-        if (!user.currentSessionId || decoded.sessionId === user.currentSessionId) {
+        if (isMainSuperAdmin(user) || !user.currentSessionId || decoded.sessionId === user.currentSessionId) {
           req.user = user;
         }
       }

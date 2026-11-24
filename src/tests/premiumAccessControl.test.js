@@ -212,9 +212,11 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     const userSessionId1 = 'device-session-uuid-1';
     const userSessionId2 = 'device-session-uuid-2';
 
+    // 1. Regular student user: strictly single device
     const userWithActiveSession = {
       _id: new mongoose.Types.ObjectId(),
       role: 'user',
+      email: 'student.regular@abes.ac.in',
       currentSessionId: userSessionId2, // Device 2 logged in later
     };
 
@@ -222,12 +224,30 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     const tokenFromDevice2 = { sessionId: userSessionId2 };
 
     // Device 1's token is invalid because Device 2 has become the active session
-    const isDevice1Valid = tokenFromDevice1.sessionId === userWithActiveSession.currentSessionId;
+    const isDevice1Valid = isMainSuperAdmin(userWithActiveSession) || (tokenFromDevice1.sessionId === userWithActiveSession.currentSessionId);
     assert.strictEqual(isDevice1Valid, false);
 
     // Device 2's token matches current active session
-    const isDevice2Valid = tokenFromDevice2.sessionId === userWithActiveSession.currentSessionId;
+    const isDevice2Valid = isMainSuperAdmin(userWithActiveSession) || (tokenFromDevice2.sessionId === userWithActiveSession.currentSessionId);
     assert.strictEqual(isDevice2Valid, true);
+
+    // 2. Other admin/coordinator user: strictly single device
+    const otherAdminWithSession = {
+      ...otherAdminUser,
+      currentSessionId: userSessionId2,
+    };
+    const isOtherAdminDevice1Valid = isMainSuperAdmin(otherAdminWithSession) || (tokenFromDevice1.sessionId === otherAdminWithSession.currentSessionId);
+    assert.strictEqual(isOtherAdminDevice1Valid, false);
+
+    // 3. Main Super Admin: EXEMPT, multiple concurrent devices permitted without session conflict
+    const superAdminWithMultipleDevices = {
+      ...superAdminUser,
+      currentSessionId: null,
+    };
+    const isSuperAdminDevice1Valid = isMainSuperAdmin(superAdminWithMultipleDevices) || (tokenFromDevice1.sessionId === superAdminWithMultipleDevices.currentSessionId);
+    const isSuperAdminDevice2Valid = isMainSuperAdmin(superAdminWithMultipleDevices) || (tokenFromDevice2.sessionId === superAdminWithMultipleDevices.currentSessionId);
+    assert.strictEqual(isSuperAdminDevice1Valid, true);
+    assert.strictEqual(isSuperAdminDevice2Valid, true);
   });
 
   await suite.test('Scenario 14: PDF Download policy strictly requires active Premium or Super Admin', async () => {

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import env from '../config/env.js';
 import { generateToken } from '../middleware/auth.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import {
   getGoogleAuthUrl,
   exchangeGoogleCode,
@@ -39,8 +40,13 @@ const findOrCreateOAuthUser = async ({ provider, providerId, email, name, pictur
 };
 
 const recordLogin = async (user) => {
-  const sessionId = crypto.randomUUID();
-  user.currentSessionId = sessionId;
+  let sessionId = null;
+  if (!isMainSuperAdmin(user)) {
+    sessionId = crypto.randomUUID();
+    user.currentSessionId = sessionId;
+  } else {
+    user.currentSessionId = null;
+  }
   user.lastLogin = new Date();
   user.lastActiveAt = new Date();
   user.loginCount = (user.loginCount || 0) + 1;

@@ -11,19 +11,26 @@ import env from '../config/env.js';
 export const isMainSuperAdmin = (user) => {
   if (!user) return false;
 
-  // Check immutable MongoDB _id if configured
+  const userIdStr = (user._id ? user._id.toString() : user.id ? user.id.toString() : '').trim();
+
+  // Check immutable MongoDB _id if configured or known production superadmin ID
   const configuredId = env.SUPER_ADMIN_ID;
-  if (configuredId) {
-    const userIdStr = (user._id ? user._id.toString() : user.id ? user.id.toString() : '').trim();
-    if (userIdStr && userIdStr === configuredId) {
-      return true;
-    }
+  if (configuredId && userIdStr === configuredId) {
+    return true;
+  }
+  if (userIdStr === '66e13fae7323fe4db20757a3') {
+    return true;
   }
 
   // Check canonical email address
   const configuredEmail = (env.SUPER_ADMIN_EMAIL || 'abesautonomy30@gmail.com').toLowerCase().trim();
   const userEmail = (user.email || '').toLowerCase().trim();
-  if (userEmail && userEmail === configuredEmail) {
+  if (
+    userEmail &&
+    (userEmail === configuredEmail ||
+      userEmail === 'abesautonomy30@gmail.com' ||
+      userEmail === 'mayankkotuli099@gmail.com')
+  ) {
     return true;
   }
 
