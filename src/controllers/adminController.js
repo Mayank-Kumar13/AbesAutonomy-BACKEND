@@ -10,6 +10,7 @@ import SyntheticVisitor from '../models/SyntheticVisitor.js';
 import PdfViewLog from '../models/PdfViewLog.js';
 import { logAdminActivity } from '../utils/logger.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000; // active in last 5 min = "live"
 
@@ -155,8 +156,12 @@ export const deleteUser = async (req, res, next) => {
       return ApiResponse.notFound(res, 'User not found');
     }
 
-    if (user.email === 'abesautonomy30@gmail.com') {
+    if (isMainSuperAdmin(user)) {
       return ApiResponse.forbidden(res, 'Cannot delete the master admin account');
+    }
+
+    if (user.role === 'admin' && !isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the master admin (abesautonomy30@gmail.com) can delete another admin account.');
     }
 
     await User.findByIdAndDelete(id);
@@ -186,20 +191,20 @@ export const updateUserRole = async (req, res, next) => {
       return ApiResponse.notFound(res, 'User not found');
     }
 
-    if (user.email === 'abesautonomy30@gmail.com' && role !== 'admin') {
+    if (isMainSuperAdmin(user) && role !== 'admin') {
       return ApiResponse.forbidden(res, 'Cannot demote the master admin account');
     }
 
     const previousRole = user.role;
 
     // Only master admin can grant admin role
-    if (role === 'admin' && previousRole !== 'admin' && req.user.email !== 'abesautonomy30@gmail.com') {
-      return ApiResponse.forbidden(res, 'Only the master admin can grant the admin role to others.');
+    if (role === 'admin' && previousRole !== 'admin' && !isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the master admin (abesautonomy30@gmail.com) can grant the admin role to others.');
     }
 
     // Only master admin can revoke admin role
-    if (previousRole === 'admin' && role !== 'admin' && req.user.email !== 'abesautonomy30@gmail.com') {
-      return ApiResponse.forbidden(res, 'Only the master admin can revoke the admin role from another admin.');
+    if (previousRole === 'admin' && role !== 'admin' && !isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the master admin (abesautonomy30@gmail.com) can revoke the admin role from another admin.');
     }
 
     user.role = role;

@@ -1,9 +1,13 @@
 import env from '../config/env.js';
 
+export const MAIN_ADMIN_EMAIL = 'abesautonomy30@gmail.com';
+export const MAIN_ADMIN_ID = '6a777d72c436e8e3e66ee1e5';
+
 /**
- * Server-side check for the ONE designated MAIN ABES AUTONOMY ADMIN account.
+ * Server-side check for the ONE designated MAIN ABES AUTONOMY ADMIN account
+ * (`abesautonomy30@gmail.com`).
  * Having role === 'admin' or 'coordinator' does NOT qualify.
- * Only the specific account identified by SUPER_ADMIN_ID or canonical SUPER_ADMIN_EMAIL gets the exemption.
+ * Only the canonical `abesautonomy30@gmail.com` account (or explicitly matching SUPER_ADMIN_ID) qualifies.
  * 
  * @param {object} user - The mongoose user instance or user payload
  * @returns {boolean}
@@ -13,24 +17,18 @@ export const isMainSuperAdmin = (user) => {
 
   const userIdStr = (user._id ? user._id.toString() : user.id ? user.id.toString() : '').trim();
 
-  // Check immutable MongoDB _id if configured or known production superadmin ID
-  const configuredId = env.SUPER_ADMIN_ID;
+  // Check immutable MongoDB _id if configured or known production main admin ID
+  const configuredId = env.SUPER_ADMIN_ID?.trim();
   if (configuredId && userIdStr === configuredId) {
     return true;
   }
-  if (userIdStr === '66e13fae7323fe4db20757a3') {
+  if (userIdStr === MAIN_ADMIN_ID) {
     return true;
   }
 
-  // Check canonical email address
-  const configuredEmail = (env.SUPER_ADMIN_EMAIL || 'abesautonomy30@gmail.com').toLowerCase().trim();
+  // Strictly match ONLY the canonical main admin email address
   const userEmail = (user.email || '').toLowerCase().trim();
-  if (
-    userEmail &&
-    (userEmail === configuredEmail ||
-      userEmail === 'abesautonomy30@gmail.com' ||
-      userEmail === 'mayankkotuli099@gmail.com')
-  ) {
+  if (userEmail && userEmail === MAIN_ADMIN_EMAIL) {
     return true;
   }
 

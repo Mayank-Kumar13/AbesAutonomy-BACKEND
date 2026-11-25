@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { evaluateNoteAccess, validateUserSubscription } from '../middleware/accessControl.js';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
+import { requireMainSuperAdmin } from '../middleware/auth.js';
 import { SUBSCRIPTION_PLANS } from '../services/paymentService.js';
 
 test('Premium Access Control & Pricing Test Suite', async (suite) => {
@@ -299,5 +300,66 @@ test('Premium Access Control & Pricing Test Suite', async (suite) => {
     assert.strictEqual(studentAfter24Hours.freePdfAccessCount, 0);
     assert.strictEqual(studentAfter24Hours.freePdfResetAt, null);
     assert.strictEqual(studentAfter24Hours.freePdfAccessedIds.length, 0);
+  });
+
+  await suite.test('Scenario 16: Strict Main Super Admin isolation (ONLY abesautonomy30@gmail.com)', async () => {
+    // Secondary/regular admins MUST NOT qualify as Main Super Admin
+    const secondaryAdmin = {
+      _id: new mongoose.Types.ObjectId(),
+      name: 'Mayank Sharma',
+      email: 'ffmayank55@gmail.com',
+      role: 'admin',
+    };
+    const oldBypassAdmin = {
+      _id: '66e13fae7323fe4db20757a3',
+      name: 'Other Admin',
+      email: 'mayankkotuli099@gmail.com',
+      role: 'admin',
+    };
+
+    assert.strictEqual(isMainSuperAdmin(superAdminUser), true);
+    assert.strictEqual(isMainSuperAdmin(otherAdminUser), false);
+    assert.strictEqual(isMainSuperAdmin(secondaryAdmin), false);
+    assert.strictEqual(isMainSuperAdmin(oldBypassAdmin), false);
+    assert.strictEqual(isMainSuperAdmin(coordinatorUser), false);
+    assert.strictEqual(isMainSuperAdmin(newStudent), false);
+
+    const runMiddleware = (user) =>
+      new Promise((resolve) => {
+        let nextCalled = false;
+        let statusCode = 200;
+        let body = null;
+        const req = { user };
+        const res = {
+          status(code) {
+            statusCode = code;
+            return this;
+          },
+          json(payload) {
+            body = payload;
+            resolve({ nextCalled, statusCode, body });
+            return this;
+          },
+        };
+        requireMainSuperAdmin(req, res, () => {
+          nextCalled = true;
+          resolve({ nextCalled, statusCode, body });
+        });
+      });
+
+    const mainRes = await runMiddleware(superAdminUser);
+    assert.strictEqual(mainRes.nextCalled, true);
+
+    const secRes = await runMiddleware(secondaryAdmin);
+    assert.strictEqual(secRes.nextCalled, false);
+    assert.strictEqual(secRes.statusCode, 403);
+
+    const otherRes = await runMiddleware(otherAdminUser);
+    assert.strictEqual(otherRes.nextCalled, false);
+    assert.strictEqual(otherRes.statusCode, 403);
+
+    const oldBypassRes = await runMiddleware(oldBypassAdmin);
+    assert.strictEqual(oldBypassRes.nextCalled, false);
+    assert.strictEqual(oldBypassRes.statusCode, 403);
   });
 });

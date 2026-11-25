@@ -18,12 +18,13 @@ import {
   deleteCoupon,
   getCouponRedemptions,
 } from '../controllers/adminCouponController.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireMainSuperAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
+// Strictly restrict ALL premium & coupon management endpoints to the ONE Main Admin (`abesautonomy30@gmail.com`)
 router.use(requireAuth);
-router.use(requireAdmin);
+router.use(requireMainSuperAdmin);
 
 router.get('/analytics', getPremiumAnalytics);
 router.get('/users', getPremiumUsers);

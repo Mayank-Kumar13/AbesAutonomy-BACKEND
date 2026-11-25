@@ -114,6 +114,21 @@ export const requireAdmin = (req, res, next) => {
 };
 
 /**
+ * Require the ONE Main Super Admin account (`abesautonomy30@gmail.com`).
+ * Rejects regular admins, coordinators, and students with 403 Forbidden.
+ * Must be used AFTER requireAuth.
+ */
+export const requireMainSuperAdmin = (req, res, next) => {
+  if (!req.user || !isMainSuperAdmin(req.user)) {
+    return ApiResponse.forbidden(
+      res,
+      'Restricted access: Only the main admin account (abesautonomy30@gmail.com) can access or manage this.'
+    );
+  }
+  next();
+};
+
+/**
  * Require admin or coordinator role.
  * Must be used AFTER requireAuth.
  */

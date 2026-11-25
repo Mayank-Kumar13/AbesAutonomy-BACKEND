@@ -200,6 +200,9 @@ export const getUserSubscriptionDetails = async (req, res, next) => {
  */
 export const manualActivateSubscription = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the main admin (abesautonomy30@gmail.com) can manually grant Premium.');
+    }
     const { plan = 'premium_4_months', customDays, reason = 'Admin manual grant' } = req.body;
     let targetUserId = req.params.id;
 
@@ -268,6 +271,9 @@ export const manualActivateSubscription = async (req, res, next) => {
  */
 export const manualExtendSubscription = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the main admin (abesautonomy30@gmail.com) can extend Premium.');
+    }
     const { days = 30, reason = 'Admin manual extension' } = req.body;
     const targetUserId = req.params.id;
 
@@ -324,6 +330,9 @@ export const manualExtendSubscription = async (req, res, next) => {
  */
 export const manualRevokeSubscription = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) {
+      return ApiResponse.forbidden(res, 'Only the main admin (abesautonomy30@gmail.com) can revoke Premium.');
+    }
     const { reason = 'Revoked by admin' } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return ApiResponse.notFound(res, 'User not found.');

@@ -3,6 +3,10 @@ import CouponRedemption from '../models/CouponRedemption.js';
 import AdminAuditLog from '../models/AdminAuditLog.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { generateCouponCode, normalizeCouponCode } from '../services/couponService.js';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
+
+const rejectNonMainAdmin = (res) =>
+  ApiResponse.forbidden(res, 'Only the main admin (abesautonomy30@gmail.com) can manage coupons.');
 
 function parseOptionalNumber(val) {
   if (val === undefined || val === null || val === '') return null;
@@ -208,6 +212,7 @@ export const listCoupons = async (req, res, next) => {
  */
 export const createCoupon = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) return rejectNonMainAdmin(res);
     let payload;
     try {
       payload = validateAndSanitizeCouponInput(req.body, false);
@@ -261,6 +266,7 @@ export const createCoupon = async (req, res, next) => {
  */
 export const updateCoupon = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) return rejectNonMainAdmin(res);
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return ApiResponse.notFound(res, 'Coupon not found.');
@@ -318,6 +324,7 @@ export const updateCoupon = async (req, res, next) => {
  */
 export const deleteCoupon = async (req, res, next) => {
   try {
+    if (!isMainSuperAdmin(req.user)) return rejectNonMainAdmin(res);
     const coupon = await Coupon.findByIdAndDelete(req.params.id);
     if (!coupon) {
       return ApiResponse.notFound(res, 'Coupon not found.');

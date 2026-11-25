@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { isMainSuperAdmin } from '../utils/superAdmin.js';
 
 const ROLES = ['user', 'admin', 'coordinator'];
 const PROVIDERS = ['email', 'google', 'github'];
@@ -193,6 +194,7 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.methods.toSafeJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  obj.isSuperAdmin = isMainSuperAdmin(this);
   return obj;
 };
 
