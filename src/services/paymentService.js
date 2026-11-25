@@ -7,6 +7,13 @@ import Subscription from '../models/Subscription.js';
 import PaymentWebhookEvent from '../models/PaymentWebhookEvent.js';
 import AdminNotification from '../models/AdminNotification.js';
 import AdminAuditLog from '../models/AdminAuditLog.js';
+import {
+  validateCouponForUser,
+  reserveFreeCouponUsage,
+  releaseFreeCouponUsage,
+  recordCouponRedemption,
+  CouponError,
+} from './couponService.js';
 
 /**
  * Fixed subscription plans definition.
@@ -89,25 +96,126 @@ export const getRazorpayInstance = () => {
 };
 
 /**
- * Creates an authorized Razorpay order for a selected plan.
+ * Creates an authorized Razorpay order for a selected plan (with optional coupon discount),
+ * or completes an instant 100%-discounted activation when payable amount is ₹0.
  */
-export const createOrder = async (user, planId) => {
+export const createOrder = async (user, planId, couponCode = null) => {
   const plan = SUBSCRIPTION_PLANS[planId];
   if (!plan) {
-    throw new Error('Invalid subscription plan selected.');
+    throw new CouponError('Invalid subscription plan selected.', 400);
+  }
+
+  let originalAmount = plan.amount;
+  let discountAmount = 0;
+  let finalAmount = plan.amount;
+  let appliedCoupon = null;
+  let isFree = false;
+
+  if (couponCode && String(couponCode).trim()) {
+    const evaluation = await validateCouponForUser({
+      code: couponCode,
+      plan,
+      userId: user._id,
+    });
+    appliedCoupon = evaluation.coupon;
+    originalAmount = evaluation.pricing.originalAmount;
+    discountAmount = evaluation.pricing.discountAmount;
+    finalAmount = evaluation.pricing.finalAmount;
+    isFree = evaluation.pricing.isFree;
+  }
+
+  const receipt = `rcpt_${Date.now()}_${user._id.toString().slice(-4)}`;
+
+  // 100% off (or below Razorpay ₹1 minimum): atomically reserve slot and activate immediately
+  if (appliedCoupon && isFree) {
+    const reserved = await reserveFreeCouponUsage(appliedCoupon, user._id);
+    try {
+      const freeOrderId = `free_cpn_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const paymentRecord = await Payment.create({
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        razorpayOrderId: freeOrderId,
+        razorpayPaymentId: `cpn_${reserved.code}`,
+        amount: 0,
+        originalAmount,
+        discountAmount,
+        couponId: reserved._id,
+        couponCode: reserved.code,
+        currency: 'INR',
+        plan: planId,
+        status: 'captured',
+        paymentMethod: 'coupon_100',
+        receipt,
+        verifiedAt: new Date(),
+      });
+
+      await recordCouponRedemption({
+        couponId: reserved._id,
+        couponCode: reserved.code,
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        paymentId: paymentRecord._id,
+        plan: planId,
+        originalAmountPaise: originalAmount,
+        discountAmountPaise: discountAmount,
+        finalAmountPaise: 0,
+        incrementUsedCount: false, // Already atomically incremented by reserveFreeCouponUsage
+      });
+
+      const { user: updatedUser, subscription } = await activateOrExtendSubscription(
+        user._id,
+        planId,
+        paymentRecord._id,
+        'coupon_free',
+        null,
+        null,
+        `100% coupon redeemed: ${reserved.code}`
+      );
+
+      await AdminNotification.create({
+        type: 'PAYMENT_SUCCESS',
+        title: '100% Coupon Subscription Activated',
+        message: `${user.name} (${user.email}) activated ${plan.name} for ₹0 using coupon ${reserved.code} (saved ₹${discountAmount / 100}).`,
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        paymentId: paymentRecord._id,
+        orderId: freeOrderId,
+        amount: 0,
+      }).catch(() => {});
+
+      return {
+        isFreeActivation: true,
+        orderId: freeOrderId,
+        amount: 0,
+        originalAmount,
+        discountAmount,
+        couponCode: reserved.code,
+        currency: 'INR',
+        plan,
+        paymentId: paymentRecord._id,
+        payment: paymentRecord,
+        subscription,
+        user: updatedUser,
+      };
+    } catch (err) {
+      await releaseFreeCouponUsage(reserved._id);
+      throw err;
+    }
   }
 
   const razorpay = getRazorpayInstance();
-  const receipt = `rcpt_${Date.now()}_${user._id.toString().slice(-4)}`;
-
   const orderOptions = {
-    amount: plan.amount,
+    amount: finalAmount,
     currency: 'INR',
     receipt,
     notes: {
       userId: user._id.toString(),
       userEmail: user.email,
       plan: planId,
+      ...(appliedCoupon ? { couponCode: appliedCoupon.code, discountAmountPaise: String(discountAmount) } : {}),
     },
   };
 
@@ -118,7 +226,11 @@ export const createOrder = async (user, planId) => {
     userName: user.name,
     userEmail: user.email,
     razorpayOrderId: razorpayOrder.id,
-    amount: plan.amount,
+    amount: finalAmount,
+    originalAmount,
+    discountAmount,
+    couponId: appliedCoupon ? appliedCoupon._id : null,
+    couponCode: appliedCoupon ? appliedCoupon.code : null,
     currency: 'INR',
     plan: planId,
     status: 'created',
@@ -126,8 +238,12 @@ export const createOrder = async (user, planId) => {
   });
 
   return {
+    isFreeActivation: false,
     orderId: razorpayOrder.id,
     amount: razorpayOrder.amount,
+    originalAmount,
+    discountAmount,
+    couponCode: appliedCoupon ? appliedCoupon.code : null,
     currency: razorpayOrder.currency,
     keyId: env.RAZORPAY_KEY_ID,
     plan,
@@ -233,8 +349,8 @@ export const verifyPayment = async (user, { razorpay_order_id, razorpay_payment_
   }
 
   const plan = SUBSCRIPTION_PLANS[payment.plan];
-  if (!plan || paymentDetails.amount !== plan.amount) {
-    throw new Error('Payment amount does not match plan price.');
+  if (!plan || paymentDetails.amount !== payment.amount) {
+    throw new Error('Payment amount does not match order amount.');
   }
 
   // Idempotency: If already captured, avoid duplicate processing
@@ -257,6 +373,22 @@ export const verifyPayment = async (user, { razorpay_order_id, razorpay_payment_
   payment.verifiedAt = new Date();
   await payment.save();
 
+  if (payment.couponId) {
+    await recordCouponRedemption({
+      couponId: payment.couponId,
+      couponCode: payment.couponCode,
+      userId: user._id,
+      userName: user.name,
+      userEmail: user.email,
+      paymentId: payment._id,
+      plan: payment.plan,
+      originalAmountPaise: payment.originalAmount ?? plan.amount,
+      discountAmountPaise: payment.discountAmount || 0,
+      finalAmountPaise: payment.amount,
+      incrementUsedCount: true,
+    });
+  }
+
   // 4. Activate or extend subscription
   const { subscription } = await activateOrExtendSubscription(
     user._id,
@@ -265,17 +397,22 @@ export const verifyPayment = async (user, { razorpay_order_id, razorpay_payment_
     'payment'
   );
 
+  const paidRupees = payment.amount / 100;
+  const couponNote = payment.couponCode
+    ? ` using coupon ${payment.couponCode} (saved ₹${(payment.discountAmount || 0) / 100})`
+    : '';
+
   // 5. Create Admin Notification
   await AdminNotification.create({
     type: 'PAYMENT_SUCCESS',
     title: 'New Premium Subscription Purchased',
-    message: `${user.name} (${user.email}) purchased ${plan.name} for ₹${plan.priceInRupees}.`,
+    message: `${user.name} (${user.email}) purchased ${plan.name} for ₹${paidRupees}${couponNote}.`,
     userId: user._id,
     userName: user.name,
     userEmail: user.email,
     paymentId: payment._id,
     orderId: payment.razorpayOrderId,
-    amount: plan.priceInRupees,
+    amount: paidRupees,
   }).catch(() => {});
 
   return {
@@ -337,6 +474,22 @@ export const processWebhook = async (rawBodyBuffer, signature, eventHeader) => {
           payment.paymentMethod = paymentEntity?.method || 'upi';
           payment.verifiedAt = new Date();
           await payment.save();
+
+          if (payment.couponId) {
+            await recordCouponRedemption({
+              couponId: payment.couponId,
+              couponCode: payment.couponCode,
+              userId: payment.userId,
+              userName: payment.userName,
+              userEmail: payment.userEmail,
+              paymentId: payment._id,
+              plan: payment.plan,
+              originalAmountPaise: payment.originalAmount ?? payment.amount,
+              discountAmountPaise: payment.discountAmount || 0,
+              finalAmountPaise: payment.amount,
+              incrementUsedCount: true,
+            });
+          }
 
           await activateOrExtendSubscription(payment.userId, payment.plan, payment._id, 'webhook');
 

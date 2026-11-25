@@ -23,8 +23,10 @@ export const getPremiumAnalytics = async (req, res, next) => {
       activePremiumUsers,
       expiredUsers,
       totalPayments,
+      plan1mCount,
       plan2mCount,
       plan4mCount,
+      planLifetimeCount,
       recentTransactions,
     ] = await Promise.all([
       User.countDocuments(),
@@ -386,6 +388,7 @@ export const getAdminPaymentHistory = async (req, res, next) => {
         { userEmail: { $regex: q, $options: 'i' } },
         { razorpayOrderId: { $regex: q, $options: 'i' } },
         { razorpayPaymentId: { $regex: q, $options: 'i' } },
+        { couponCode: { $regex: q, $options: 'i' } },
       ];
     }
 

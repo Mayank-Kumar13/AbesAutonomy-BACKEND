@@ -4,6 +4,11 @@ import {
   verifyPayment,
   processWebhook,
 } from '../services/paymentService.js';
+import {
+  evaluateCouponAcrossPlans,
+  validateCouponForUser,
+  CouponError,
+} from '../services/couponService.js';
 import { validateUserSubscription, validateAndRenewFreePdfQuota } from '../middleware/accessControl.js';
 import { isMainSuperAdmin } from '../utils/superAdmin.js';
 import Payment from '../models/Payment.js';
@@ -19,19 +24,78 @@ export const getPlans = (req, res) => {
 };
 
 /**
+ * POST /api/payments/validate-coupon
+ * Validates a coupon code and returns live discounted pricing across eligible plans.
+ */
+export const validateCouponHandler = async (req, res, next) => {
+  try {
+    const { code, planId } = req.body;
+    if (!code || !String(code).trim()) {
+      return ApiResponse.badRequest(res, 'Please enter a coupon code.');
+    }
+
+    const userId = req.user?._id || null;
+
+    if (planId) {
+      const plan = SUBSCRIPTION_PLANS[planId];
+      if (!plan) {
+        return ApiResponse.badRequest(res, 'Invalid subscription plan selected.');
+      }
+      const { coupon, pricing } = await validateCouponForUser({ code, plan, userId });
+      const allPlans = await evaluateCouponAcrossPlans({
+        code,
+        plans: Object.values(SUBSCRIPTION_PLANS),
+        userId,
+      });
+      return ApiResponse.success(
+        res,
+        {
+          coupon: allPlans.coupon,
+          pricing,
+          plans: allPlans.plans,
+          appliedCode: coupon.code,
+        },
+        `Coupon ${coupon.code} applied!`
+      );
+    }
+
+    const evaluation = await evaluateCouponAcrossPlans({
+      code,
+      plans: Object.values(SUBSCRIPTION_PLANS),
+      userId,
+    });
+    return ApiResponse.success(res, evaluation, `Coupon ${evaluation.coupon.code} applied!`);
+  } catch (error) {
+    if (error instanceof CouponError || error.statusCode === 400) {
+      return ApiResponse.badRequest(res, error.message);
+    }
+    next(error);
+  }
+};
+
+/**
  * POST /api/payments/create-order
- * Create a new Razorpay order for authenticated user.
+ * Create a new Razorpay order (with optional coupon) or free 100%-discounted activation.
  */
 export const createOrderHandler = async (req, res, next) => {
   try {
-    const { planId } = req.body;
+    const { planId, couponCode } = req.body;
     if (!planId) {
       return ApiResponse.badRequest(res, 'Plan ID is required.');
     }
 
-    const orderData = await createOrder(req.user, planId);
-    return ApiResponse.success(res, orderData, 'Order created successfully');
+    const orderData = await createOrder(req.user, planId, couponCode || null);
+    return ApiResponse.success(
+      res,
+      orderData,
+      orderData.isFreeActivation
+        ? 'Subscription activated with 100% coupon discount!'
+        : 'Order created successfully'
+    );
   } catch (error) {
+    if (error instanceof CouponError || error.statusCode === 400) {
+      return ApiResponse.badRequest(res, error.message);
+    }
     next(error);
   }
 };
@@ -63,7 +127,7 @@ export const verifyPaymentHandler = async (req, res, next) => {
  * POST /api/payments/webhook
  * Receives and processes server-to-server Razorpay webhooks.
  */
-export const webhookHandler = async (req, res, next) => {
+export const webhookHandler = async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
     const eventId = req.headers['x-razorpay-event-id'];
@@ -72,7 +136,6 @@ export const webhookHandler = async (req, res, next) => {
       return res.status(400).json({ error: 'Missing webhook signature' });
     }
 
-    // Use rawBody buffer if available (captured in app.js) or stringified body
     const rawBodyBuffer = req.rawBody || Buffer.from(JSON.stringify(req.body));
     const result = await processWebhook(rawBodyBuffer, signature, eventId);
 
@@ -99,7 +162,10 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
       if (user.premiumPlan === 'premium_lifetime') {
         daysRemaining = 99999;
       } else {
-        daysRemaining = Math.max(0, Math.ceil((new Date(user.premiumExpiryDate) - now) / (1000 * 60 * 60 * 24)));
+        daysRemaining = Math.max(
+          0,
+          Math.ceil((new Date(user.premiumExpiryDate) - now) / (1000 * 60 * 60 * 24))
+        );
       }
     }
 
@@ -121,7 +187,9 @@ export const getUserSubscriptionStatus = async (req, res, next) => {
       freePdfAccessCount: freeCount,
       freePdfRemaining: freeRemaining,
       freePdfResetAt: user.freePdfResetAt || null,
-      freePdfResetInSeconds: user.freePdfResetAt ? Math.max(0, Math.ceil((new Date(user.freePdfResetAt) - now) / 1000)) : null,
+      freePdfResetInSeconds: user.freePdfResetAt
+        ? Math.max(0, Math.ceil((new Date(user.freePdfResetAt) - now) / 1000))
+        : null,
       isSuperAdmin: isMainSuperAdmin(user),
       payments,
       subscriptions,

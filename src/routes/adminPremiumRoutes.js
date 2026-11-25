@@ -11,6 +11,13 @@ import {
   getAdminNotifications,
   markNotificationRead,
 } from '../controllers/adminPremiumController.js';
+import {
+  listCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
+  getCouponRedemptions,
+} from '../controllers/adminCouponController.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
@@ -28,5 +35,12 @@ router.get('/payments', getAdminPaymentHistory);
 router.get('/audit-logs', getAdminAuditLogs);
 router.get('/notifications', getAdminNotifications);
 router.post('/notifications/mark-read', markNotificationRead);
+
+// Coupon management
+router.get('/coupons', listCoupons);
+router.post('/coupons', createCoupon);
+router.patch('/coupons/:id', updateCoupon);
+router.delete('/coupons/:id', deleteCoupon);
+router.get('/coupons/:id/redemptions', getCouponRedemptions);
 
 export default router;

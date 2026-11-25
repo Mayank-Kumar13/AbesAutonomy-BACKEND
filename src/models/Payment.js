@@ -36,7 +36,28 @@ const paymentSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: true, // in paise: 2900 = ₹29, 9900 = ₹99, 39900 = ₹399
+      required: true, // final payable amount in paise
+    },
+    originalAmount: {
+      type: Number,
+      default: null, // plan price before coupon discount in paise
+    },
+    discountAmount: {
+      type: Number,
+      default: 0, // coupon discount amount in paise
+    },
+    couponId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon',
+      default: null,
+      index: true,
+    },
+    couponCode: {
+      type: String,
+      default: null,
+      uppercase: true,
+      trim: true,
+      index: true,
     },
     currency: {
       type: String,
