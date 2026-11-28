@@ -1,4 +1,3 @@
-
 /**
  * OCR fallback for scanned/image-only PDFs.
  * Renders PDF pages to PNG using PDF.js,
@@ -8,6 +7,12 @@
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createCanvas } from '@napi-rs/canvas';
 import { createWorker } from 'tesseract.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// eng.traineddata lives in backend/ (committed to git) so OCR never depends on a CDN download.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LANG_PATH = path.resolve(__dirname, '../../..');
 
 const MAX_OCR_PAGES = Math.max(
   1,
@@ -39,7 +44,15 @@ export const ocrPdfPages = async (buffer, requestedPageCount) => {
 
     // Initialize OCR worker
     worker = await createWorker(
-      process.env.AI_OCR_LANG || 'eng'
+      process.env.AI_OCR_LANG || 'eng',
+      1,
+      {
+        langPath: LANG_PATH,   // load the local file instead of downloading
+        gzip: false,           // local file is raw .traineddata, not .gz
+        cacheMethod: 'none',
+        errorHandler: (err) =>
+          console.error('[Tesseract worker error]', err?.message || err),
+      }
     );
 
     const pages = [];
@@ -75,6 +88,7 @@ export const ocrPdfPages = async (buffer, requestedPageCount) => {
 
       // Extract text using OCR
       const result = await worker.recognize(png);
+      console.log(`[PDF OCR] page ${pageNumber} confidence: ${result.data.confidence}`);
 
       pages.push(
         String(result?.data?.text || '').trim()

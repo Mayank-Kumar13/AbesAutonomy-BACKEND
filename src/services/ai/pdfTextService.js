@@ -1,4 +1,3 @@
-
 /**
  * Gets a searchable index for a Note's PDF.
  *
@@ -288,7 +287,7 @@ const extractAndStore = async (note, signature) => {
 
       throw new PdfTextError(
         'PARSE_FAILED',
-        'Could not OCR this scanned PDF. Please try a clearer scan.'
+        `Could not OCR this scanned PDF: ${err?.message || 'unknown error'}`
       );
     }
   }
