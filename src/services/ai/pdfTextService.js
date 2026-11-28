@@ -40,7 +40,7 @@ import {
 } from './pdfOcrService.js';
 
 // Bump version to rebuild previously cached PDF indexes.
-const EXTRACTOR_VERSION = 'v2-ocr';
+const EXTRACTOR_VERSION = 'v3-vision-ocr';
 
 const MAX_PAGES = 600;
 
